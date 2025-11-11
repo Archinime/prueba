@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Fondo + Chroma (ventana adaptable a aspecto del vídeo)</title>
+  <title>Fondo + Chroma (playlist aleatoria hola/rem)</title>
   <style>
     /* Reset */
     html,body { height:100%; margin:0; background:#000; font-family: Arial, sans-serif; }
@@ -15,7 +15,7 @@
       z-index:0; pointer-events:none; background:#000;
     }
 
-    /* Contenedor adaptable: tamaño se asigna por JS según el aspecto del vídeo */
+    /* Contenedor adaptable para el frontal */
     #fgContainer {
       position:fixed;
       right:20px; bottom:20px;
@@ -38,14 +38,14 @@
     #fgContainer.enter { transform: translateY(0); opacity: 1; }
     #fgContainer.exit  { transform: translateY(60px); opacity: 0; }
 
-    /* Canvas y vídeo: ocupan todo el contenedor. Canvas usado para chroma (display block cuando activo) */
+    /* Canvas y vídeo: ocupan todo el contenedor. */
     canvas#fgCanvas, video#fgVideo {
       width:100%; height:100%; display:block;
       pointer-events:none;
-      object-fit: contain; /* importante: muestra todo el vídeo sin recortar */
+      object-fit: contain; /* muestra todo el vídeo sin recortar */
       background: transparent;
     }
-    /* Inicialmente canvas visible (si chroma ok) — display toggled by JS */
+    /* Iniciamos canvas oculto; JS decide mostrar */
     canvas#fgCanvas { display:none; }
 
     /* Controls (solo file://) */
@@ -71,13 +71,6 @@
     .notice { position:fixed; top:12px; right:12px; z-index:10; background:#ffb74d; color:#000; padding:8px 12px; border-radius:8px; font-weight:600; display:none; }
     .error  { position:fixed; top:12px; left:12px; z-index:10; background:#ff4d4d; color:#fff; padding:8px 12px; border-radius:8px; font-weight:600; display:none; }
 
-    /* Hint */
-    #fgContainer .hint {
-      position:absolute; left:8px; top:6px; z-index:6; font-size:12px; color:rgba(255,255,255,0.95);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.55);
-      pointer-events:none;
-    }
-
     @media (max-width:420px) {
       #fgContainer { right:12px; bottom:12px; }
     }
@@ -92,10 +85,9 @@
     </video>
 
     <!-- Contenedor adaptable para el frontal -->
-    <div id="fgContainer" aria-label="Vídeo frontal (haz clic para ocultar)">
-      <div class="hint">Haz clic para ocultar</div>
+    <div id="fgContainer" aria-label="Vídeo frontal">
       <canvas id="fgCanvas"></canvas>
-      <video id="fgVideo" src="hola.mp4" muted loop playsinline></video>
+      <video id="fgVideo" muted loop playsinline></video>
     </div>
 
     <!-- Controles (JS decide mostrar si file://) -->
@@ -123,11 +115,11 @@
   </div>
 
 <script>
-/* Elementos y variables */
+/* CONFIG y ELEMENTOS */
 const protocol = location.protocol; // 'file:', 'http:', 'https:'
 const fgContainer = document.getElementById('fgContainer');
 const fgCanvas = document.getElementById('fgCanvas');
-const fgVideo = document.getElementById('fgVideo'); // hola.mp4 local
+const fgVideo = document.getElementById('fgVideo'); // elemento video que usaremos para reproducir cada clip
 const bgVideo = document.getElementById('bgVideo');
 const ctx = fgCanvas.getContext('2d', { alpha: true });
 
@@ -148,23 +140,37 @@ let off = document.createElement('canvas');
 let offCtx = off.getContext('2d');
 let animationId = null;
 let usingChroma = true;
+let scheduledTimer = null;
 
-/* Preset para HTTP(S) */
-const PRESET_HTTP = { threshold: 0.25, diff: 0, soft: 100 };
+/* Lista de vídeos: añade aquí más vídeos si lo deseas.
+   Cada entrada tiene: id (nombre), src (ruta local), preset (valores para http/https),
+   y opcionalmente valores por defecto para file:// (pero file:// muestra controles).
+*/
+const videoList = [
+  { id: 'hola', src: 'hola.mp4', preset: { threshold: 0.25, diff: 0, soft: 100 } },
+  { id: 'rem',  src: 'rem.mp4',  preset: { threshold: 0.50, diff: 40, soft: 30  } }
+];
+
+/* Preset HTTP: se aplicarán los presets de cada video cuando la página esté en http(s) */
+const PRESET_HTTP = null; // no usado globalmente: aplicamos por vídeo
+
+/* UTIL: seleccionar vídeo aleatorio distinto del actual (si posible) */
+function pickRandomVideo(excludeId) {
+  if (!videoList || videoList.length === 0) return null;
+  if (videoList.length === 1) return videoList[0];
+  const candidates = videoList.filter(v => v.id !== excludeId);
+  if (candidates.length === 0) return videoList[Math.floor(Math.random()*videoList.length)];
+  return candidates[Math.floor(Math.random()*candidates.length)];
+}
 
 /* Mostrar/ocultar controles según protocolo */
 function setupControlsByProtocol() {
   if (protocol === 'file:') {
     controls.style.display = 'block';
-    // mantener valores iniciales
+    // dejar valores por defecto editables por el usuario
   } else {
     controls.style.display = 'none';
-    thresholdEl.value = PRESET_HTTP.threshold;
-    diffEl.value = PRESET_HTTP.diff;
-    softEl.value = PRESET_HTTP.soft;
-    thVal.textContent = PRESET_HTTP.threshold.toFixed(2);
-    diffVal.textContent = PRESET_HTTP.diff;
-    softVal.textContent = PRESET_HTTP.soft;
+    // en http(s) no usamos estos controles globales: aplicamos presets por vídeo cuando cargamos cada vídeo
   }
 }
 
@@ -172,26 +178,22 @@ function setupControlsByProtocol() {
 function adjustContainerToVideo(video) {
   const vw = video.videoWidth || 16;
   const vh = video.videoHeight || 9;
-  // límites: no más del 70vw / 70vh; tampoco queremos que crezca demasiado en pantallas grandes
-  const maxW = Math.min(window.innerWidth * 0.7, 800); // px
-  const maxH = Math.min(window.innerHeight * 0.7, 800);
-  // calc scale to fit (contain)
+  const maxW = Math.min(window.innerWidth * 0.7, 900);
+  const maxH = Math.min(window.innerHeight * 0.7, 900);
   const scale = Math.min(maxW / vw, maxH / vh, 1.0);
-  const displayW = Math.max(120, Math.round(vw * scale)); // min width safeguard
+  const displayW = Math.max(120, Math.round(vw * scale));
   const displayH = Math.max(80, Math.round(vh * scale));
-  // apply to container
   fgContainer.style.width = displayW + 'px';
   fgContainer.style.height = displayH + 'px';
-  // set canvas pixel size to match container for crisp rendering
   fgCanvas.width = displayW;
   fgCanvas.height = displayH;
-  // Offscreen: use video natural resolution but cap to 1280x1280 for perf
+  // Offscreen: use vídeo natural resolución con tope para rendimiento
   const cap = 1280;
-  off.width = Math.min(video.videoWidth || displayW, cap);
-  off.height = Math.min(video.videoHeight || displayH, cap);
+  off.width = Math.min(video.videoWidth || displayW*2, cap);
+  off.height = Math.min(video.videoHeight || displayH*2, cap);
 }
 
-/* Chroma-key algorithm */
+/* Chroma-key (idéntico algoritmo) */
 function applyChromaKey(imageData, settings) {
   const data = imageData.data;
   const len = data.length;
@@ -221,13 +223,12 @@ function applyChromaKey(imageData, settings) {
   return imageData;
 }
 
-/* Draw processed off canvas into fgCanvas using 'contain' (show whole video) */
+/* Draw processed off canvas into fgCanvas using 'contain' */
 function drawProcessedToScreen() {
   const cw = fgCanvas.width, ch = fgCanvas.height;
   const vw = off.width, vh = off.height;
   ctx.clearRect(0,0,cw,ch);
   if (vw === 0 || vh === 0) return;
-  // contain scale (fit whole)
   const scale = Math.min(cw / vw, ch / vh);
   const dw = Math.round(vw * scale);
   const dh = Math.round(vh * scale);
@@ -237,18 +238,17 @@ function drawProcessedToScreen() {
 }
 
 /* Processing loop */
-function processLoop(video) {
+function processLoop(video, currentVideoObj) {
   if (!usingChroma) return;
   if (video.paused || video.ended) {
-    animationId = requestAnimationFrame(()=>processLoop(video));
+    animationId = requestAnimationFrame(()=>processLoop(video, currentVideoObj));
     return;
   }
 
-  // Adjust off to video resolution if changed (cap applied earlier)
   if (video.videoWidth && video.videoHeight &&
       (off.width !== Math.min(video.videoWidth,1280) || off.height !== Math.min(video.videoHeight,1280))) {
-    off.width = Math.min(video.videoWidth, 1280);
-    off.height = Math.min(video.videoHeight, 1280);
+    off.width = Math.min(video.videoWidth,1280);
+    off.height = Math.min(video.videoHeight,1280);
   }
 
   try {
@@ -268,11 +268,18 @@ function processLoop(video) {
     return;
   }
 
-  const settings = {
-    threshold: parseFloat(thresholdEl.value),
-    diff: parseInt(diffEl.value, 10),
-    soft: parseInt(softEl.value, 10)
-  };
+  // Si estamos en http/https aplicamos el preset del vídeo; si estamos en file:// tomamos valores de los controles
+  let settings;
+  if (protocol === 'file:') {
+    settings = {
+      threshold: parseFloat(thresholdEl.value),
+      diff: parseInt(diffEl.value, 10),
+      soft: parseInt(softEl.value, 10)
+    };
+  } else {
+    // usar preset guardado en el objeto currentVideoObj
+    settings = currentVideoObj && currentVideoObj.preset ? currentVideoObj.preset : { threshold:0.4, diff:30, soft:30 };
+  }
   thVal.textContent = settings.threshold.toFixed(2);
   diffVal.textContent = settings.diff;
   softVal.textContent = settings.soft;
@@ -281,10 +288,10 @@ function processLoop(video) {
   offCtx.putImageData(processed, 0, 0);
   drawProcessedToScreen();
 
-  animationId = requestAnimationFrame(()=>processLoop(video));
+  animationId = requestAnimationFrame(()=>processLoop(video, currentVideoObj));
 }
 
-/* Fallback: show video element without chroma */
+/* Activar fallback: mostrar el video tal cual (sin chroma) */
 function activateFallback(message) {
   usingChroma = false;
   fgCanvas.style.display = 'none';
@@ -296,114 +303,143 @@ function activateFallback(message) {
   showContainer();
 }
 
-/* Show container (entry animation) */
+/* Mostrar container con animación */
 function showContainer() {
   fgContainer.style.display = 'flex';
   fgContainer.classList.remove('exit');
   requestAnimationFrame(()=> fgContainer.classList.add('enter'));
 }
 
-/* Hide container with animation */
-function hideContainerWithAnimation() {
+/* Ocultar con animación (usado para transición entre vídeos durante los 3s) */
+function hideContainerInstantlyForTransition() {
   fgContainer.classList.remove('enter');
   fgContainer.classList.add('exit');
-  setTimeout(()=> {
-    fgContainer.style.display = 'none';
-    try { fgVideo.pause(); } catch(e){}
-    if (animationId) cancelAnimationFrame(animationId);
-  }, 340);
+  // no ocultamos por completo; lo dejamos para volver a mostrar cuando inicie el siguiente
 }
 
-/* Try autoplay */
-function tryAutoplayBoth(procVideo) {
-  const p1 = bgVideo.play().catch(()=>{});
-  let p2;
-  if (procVideo) p2 = procVideo.play().catch(()=>{});
-  else p2 = fgVideo.play().catch(()=>{});
-  Promise.allSettled([p1, p2]).then(results => {
-    const anyRejected = results.some(r => r.status === 'rejected');
-    if (anyRejected) {
-      playOverlay.style.display = 'flex';
-    } else {
-      playOverlay.style.display = 'none';
+/* Cambiar a un nuevo vídeo (aleatorio) con delay opcional (3s) y animaciones */
+function scheduleNextVideo(afterSeconds = 3, excludeId = null) {
+  // cancelar cualquier timer previo
+  if (scheduledTimer) {
+    clearTimeout(scheduledTimer);
+    scheduledTimer = null;
+  }
+
+  // animación de salida inmediata
+  hideContainerInstantlyForTransition();
+
+  scheduledTimer = setTimeout(() => {
+    const next = pickRandomVideo(excludeId);
+    if (!next) return;
+    playVideoClip(next);
+  }, afterSeconds * 1000);
+}
+
+/* Reproduce el clip infoObj (obj de videoList) */
+function playVideoClip(infoObj) {
+  if (!infoObj) return;
+  // Preparar elemento de video con la fuente
+  usingChroma = true; // intentamos chroma (si falla, activateFallback lo ajustará)
+  fgVideo.src = infoObj.src;
+  fgVideo.load();
+
+  // Aplicar presets para http(s): si protocolo http(s) aplicamos al control visual (aunque controles estén ocultos)
+  if (protocol !== 'file:' && infoObj.preset) {
+    thresholdEl.value = infoObj.preset.threshold;
+    diffEl.value = infoObj.preset.diff;
+    softEl.value = infoObj.preset.soft;
+    thVal.textContent = parseFloat(infoObj.preset.threshold).toFixed(2);
+    diffVal.textContent = infoObj.preset.diff;
+    softVal.textContent = infoObj.preset.soft;
+  }
+
+  // Cuando metadata lista adaptamos el contenedor y arrancamos reproducción + procesamiento
+  fgVideo.addEventListener('loadedmetadata', function onMeta() {
+    fgVideo.removeEventListener('loadedmetadata', onMeta);
+    adjustContainerToVideo(fgVideo);
+
+    // Mostrar canvas (cuando chroma posible)
+    fgCanvas.style.display = 'block';
+    fgVideo.style.display = 'none';
+
+    // Intentar reproducir; si autoplay bloqueado, el play() fallará -> boton visible
+    const pVideoPlay = fgVideo.play().catch(()=>{});
+    const pBgPlay = bgVideo.play().catch(()=>{});
+    Promise.allSettled([pBgPlay, pVideoPlay]).then(results => {
+      // si alguna promesa rechaza, dejamos overlay para que usuario pulse
+      const anyRejected = results.some(r => r.status === 'rejected');
+      if (anyRejected) playOverlay.style.display = 'flex';
+      else playOverlay.style.display = 'none';
+      // Iniciar loop de procesamiento
+      if (!animationId && usingChroma) animationId = requestAnimationFrame(()=>processLoop(fgVideo, infoObj));
+      // mostrar con animación
       showContainer();
-      if (usingChroma && procVideo) {
-        if (!animationId) animationId = requestAnimationFrame(()=>processLoop(procVideo));
-      } else {
-        fgCanvas.style.display = usingChroma ? 'block' : 'none';
-        fgVideo.style.display = usingChroma ? 'none' : 'block';
-      }
-    }
+    });
+
+    // configurar handler para "ended" del clip: cuando termine, schedule next after 3s
+    fgVideo.onended = () => {
+      // schedule next excluding the current to reduce immediate repeats
+      scheduleNextVideo(3, infoObj.id);
+    };
   });
+
+  // Manejar errores de carga del archivo
+  fgVideo.onerror = (e) => {
+    console.error('Error cargando clip:', infoObj.src, e);
+    activateFallback('Error cargando el clip. Mostrando fallback (sin recorte).');
+  };
 }
 
-/* Inicialización */
+/* Inicialización: al cargar la página se reproduce un clip aleatorio */
 function init() {
   setupControlsByProtocol();
 
-  // prepare container initial hidden state
+  // Inicialmente ocultamos canvas/video y container; lo mostraremos al reproducir
   fgContainer.style.display = 'none';
+  fgCanvas.style.display = 'none';
+  fgVideo.style.display = 'none';
 
-  // When video metadata loaded, adapt container to video's aspect ratio
-  fgVideo.addEventListener('loadedmetadata', () => {
-    adjustContainerToVideo(fgVideo);
-
-    // If HTTP/HTTPS, we use preset values already set earlier; if file:// user can adjust
-    // Try autoplay and start chroma processing (processing will fall back on CORS errors)
-    // Show canvas initially and start processing
-    fgCanvas.style.display = 'block';
-    fgVideo.style.display = 'none';
-    tryAutoplayBoth(fgVideo);
-    // Start processing loop (will handle CORS/getImageData errors)
-    if (!animationId && usingChroma) animationId = requestAnimationFrame(()=>processLoop(fgVideo));
+  // Click en el recuadro: en lugar de ocultar, programa otro vídeo aleatorio tras 3s
+  fgContainer.addEventListener('click', () => {
+    // cancelamos cualquier scheduledTimer para evitar múltiples disparos simultáneos
+    if (scheduledTimer) {
+      clearTimeout(scheduledTimer);
+      scheduledTimer = null;
+    }
+    // Schedule next after 3s, excluding current clip id if possible
+    const currentSrc = fgVideo.src ? fgVideo.src.split('/').pop() : null;
+    // find current id in list (match by filename)
+    let currentId = null;
+    if (currentSrc) {
+      for (const v of videoList) {
+        if (v.src.endsWith(currentSrc)) { currentId = v.id; break; }
+      }
+    }
+    scheduleNextVideo(3, currentId);
   });
 
-  // handle load errors
-  fgVideo.addEventListener('error', (e) => {
-    console.error('Error cargando hola.mp4', e);
-    activateFallback('Error cargando el vídeo frontal. Mostrando fallback (sin recorte).');
-  });
-
-  // update container size on window resize to keep it within screen
-  window.addEventListener('resize', () => {
-    // if video metadata exists, re-adjust
-    if (fgVideo.videoWidth && fgVideo.videoHeight) adjustContainerToVideo(fgVideo);
-  });
-
-  // click to hide container
-  fgContainer.addEventListener('click', (e) => {
-    if (fgContainer.style.display === 'none') return;
-    hideContainerWithAnimation();
-  });
-
-  // play button handler
+  // Play overlay button: intenta iniciar reproducción
   playBtn.addEventListener('click', () => {
     playOverlay.style.display = 'none';
     bgVideo.play().catch(()=>{});
-    fgVideo.play().then(()=> {
-      if (usingChroma) {
-        fgCanvas.style.display = 'block';
-        fgVideo.style.display = 'none';
-        if (!animationId) animationId = requestAnimationFrame(()=>processLoop(fgVideo));
-      } else {
-        fgVideo.style.display = 'block';
-        fgCanvas.style.display = 'none';
-      }
-      showContainer();
-    }).catch(()=> {
-      activateFallback('No se pudo iniciar reproducción automáticamente.');
-    });
+    fgVideo.play().catch(()=>{});
   });
 
-  // controls update display values
+  // Si hay controles (file://), mostrar valores en UI cuando cambien
   [thresholdEl, diffEl, softEl].forEach(el => el.addEventListener('input', () => {
     thVal.textContent = parseFloat(thresholdEl.value).toFixed(2);
     diffVal.textContent = diffEl.value;
     softVal.textContent = softEl.value;
   }));
+
+  // Al arrancar, elegir un vídeo aleatorio para iniciar
+  const first = pickRandomVideo(null);
+  // Si no hay vídeos definidos no hacemos nada
+  if (!first) return;
+  playVideoClip(first);
 }
 
-/* Start */
+/* Lanzar init */
 init();
 
 </script>
