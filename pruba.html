@@ -148,7 +148,7 @@ let currentVideoObj = null;
 /* Lista de vídeos: cada uno con su preset de chroma (ajusta si quieres) */
 const videoList = [
   { id: 'hola', src: 'hola.mp4', preset: { threshold: 0.25, diff: 0, soft: 100 } },
-  { id: 'rem',  src: 'rem.mp4',  preset: { threshold: 0.50, diff: 40, soft: 30  } }
+  { id: 'rem',  src: 'rem.mp4',  preset: { threshold: 0.24, diff: 0, soft: 100  } }
 ];
 
 /* UTIL: detectar si estamos en móvil por ancho (puedes ajustar breakpoint) */
@@ -172,7 +172,8 @@ function setupControlsByProtocol() {
 }
 
 /* Ajustar tamaño del contenedor según la relación de aspecto del vídeo
-   + reglas específicas: reducir hola en PC, reducir rem en móvil. */
+   + reglas específicas: en movil a rem reduzelo (se mantiene).
+   Nota: ya no hay reducción especial para 'hola' en PC — ahora 'hola' y 'rem' usan la misma lógica en escritorio. */
 function adjustContainerToVideo(video, infoObj) {
   const vw = video.videoWidth || 16;
   const vh = video.videoHeight || 9;
@@ -181,14 +182,6 @@ function adjustContainerToVideo(video, infoObj) {
   // base max sizes
   let maxW = Math.min(window.innerWidth * 0.7, 900);
   let maxH = Math.min(window.innerHeight * 0.7, 900);
-
-  // Special rules:
-  // - If on DESKTOP (not mobile) and video is 'hola', make it smaller (reduced size on PC).
-  if (!mobile && infoObj && infoObj.id === 'hola') {
-    // reduce to roughly 30% of width but cap around 480px
-    maxW = Math.min(window.innerWidth * 0.30, 480);
-    maxH = Math.min(window.innerHeight * 0.30, 480);
-  }
 
   // - If on MOBILE and video is 'rem', make it smaller (reduced size on mobile).
   if (mobile && infoObj && infoObj.id === 'rem') {
@@ -386,7 +379,7 @@ function playVideoClip(infoObj) {
   fgVideo.addEventListener('loadedmetadata', function onMeta() {
     fgVideo.removeEventListener('loadedmetadata', onMeta);
 
-    // adjust container size with infoObj (so rules for hola/rem apply)
+    // adjust container size with infoObj (so rules for rem on mobile apply)
     adjustContainerToVideo(fgVideo, infoObj);
 
     // show canvas and hide native video element (we'll draw processed frames)
@@ -426,7 +419,7 @@ function init() {
   fgCanvas.style.display = 'none';
   fgVideo.style.display = 'none';
 
-  // Click en el container => schedule next after 3s (exclude current)
+  // Click en el container -> schedule next after 3s (exclude current)
   fgContainer.addEventListener('click', () => {
     if (scheduledTimer) {
       clearTimeout(scheduledTimer);
