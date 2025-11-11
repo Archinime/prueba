@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Fondo + Chroma (playlist aleatoria hola/rem)</title>
+  <title>Fondo + Chroma (playlist adaptado PC/Móvil)</title>
   <style>
     /* Reset */
     html,body { height:100%; margin:0; background:#000; font-family: Arial, sans-serif; }
@@ -15,26 +15,25 @@
       z-index:0; pointer-events:none; background:#000;
     }
 
-    /* Contenedor adaptable para el frontal
-       -> Se quitaron fondo, sombra y cualquier marco visible para que no parezca recuadro */
+    /* Contenedor adaptable para el frontal (sin marco visible).
+       left/right posicionados dinámicamente por JS, siempre en esquina (nunca centro). */
     #fgContainer {
       position:fixed;
-      /* left/right se asignan dinámicamente (aleatorio) */
       bottom:20px;
       z-index:5;
       pointer-events:auto;
       display:flex; align-items:center; justify-content:center;
       transform: translateY(30px);
       opacity: 0;
-      transition: transform 280ms ease-out, opacity 220ms ease-out;
+      transition: transform 280ms ease-out, opacity 220ms ease-out, left 120ms, right 120ms;
       will-change: transform, opacity;
       overflow: hidden;
       min-width: 120px; min-height: 80px;
       max-width: calc(70vw); max-height: calc(70vh);
-      /* removed box-shadow and background to hide any visible frame */
       box-shadow: none;
       background: transparent;
       border-radius: 0;
+      touch-action: manipulation; /* mobile */
     }
 
     /* Entrada / salida */
@@ -48,7 +47,7 @@
       object-fit: contain; /* muestra todo el vídeo sin recortar */
       background: transparent;
     }
-    /* Iniciamos canvas oculto; JS decide mostrar */
+    /* canvas se activa cuando chroma OK */
     canvas#fgCanvas { display:none; }
 
     /* Controls (solo file://) */
@@ -87,7 +86,7 @@
       Tu navegador no soporta vídeo.
     </video>
 
-    <!-- Contenedor adaptable para el frontal (sin marco visible) -->
+    <!-- Contenedor adaptable para el frontal -->
     <div id="fgContainer" aria-label="Vídeo frontal">
       <canvas id="fgCanvas"></canvas>
       <video id="fgVideo" muted loop playsinline></video>
@@ -118,7 +117,7 @@
   </div>
 
 <script>
-/* CONFIG y ELEMENTOS */
+/* ELEMENTOS Y ESTADO */
 const protocol = location.protocol; // 'file:', 'http:', 'https:'
 const fgContainer = document.getElementById('fgContainer');
 const fgCanvas = document.getElementById('fgCanvas');
@@ -146,11 +145,16 @@ let usingChroma = true;
 let scheduledTimer = null;
 let currentVideoObj = null;
 
-/* Lista de vídeos: cada uno con su preset de chroma */
+/* Lista de vídeos: cada uno con su preset de chroma (ajusta si quieres) */
 const videoList = [
   { id: 'hola', src: 'hola.mp4', preset: { threshold: 0.25, diff: 0, soft: 100 } },
   { id: 'rem',  src: 'rem.mp4',  preset: { threshold: 0.50, diff: 40, soft: 30  } }
 ];
+
+/* UTIL: detectar si estamos en móvil por ancho (puedes ajustar breakpoint) */
+function isMobileScreen() {
+  return window.matchMedia && window.matchMedia('(max-width:767px)').matches;
+}
 
 /* UTIL: seleccionar vídeo aleatorio distinto del actual (si posible) */
 function pickRandomVideo(excludeId) {
@@ -161,32 +165,54 @@ function pickRandomVideo(excludeId) {
   return candidates[Math.floor(Math.random()*candidates.length)];
 }
 
-/* Mostrar/ocultar controles según protocolo */
+/* Mostrar/ocultar controles segun protocolo */
 function setupControlsByProtocol() {
-  if (protocol === 'file:') {
-    controls.style.display = 'block';
-  } else {
-    controls.style.display = 'none';
-  }
+  if (protocol === 'file:') controls.style.display = 'block';
+  else controls.style.display = 'none';
 }
 
-/* Ajustar tamaño del contenedor según la relación de aspecto del vídeo */
-function adjustContainerToVideo(video) {
+/* Ajustar tamaño del contenedor según la relación de aspecto del vídeo
+   + reglas específicas: reducir hola en PC, reducir rem en móvil. */
+function adjustContainerToVideo(video, infoObj) {
   const vw = video.videoWidth || 16;
   const vh = video.videoHeight || 9;
-  const maxW = Math.min(window.innerWidth * 0.7, 900);
-  const maxH = Math.min(window.innerHeight * 0.7, 900);
+  const mobile = isMobileScreen();
+
+  // base max sizes
+  let maxW = Math.min(window.innerWidth * 0.7, 900);
+  let maxH = Math.min(window.innerHeight * 0.7, 900);
+
+  // Special rules:
+  // - If on DESKTOP (not mobile) and video is 'hola', make it smaller (reduced size on PC).
+  if (!mobile && infoObj && infoObj.id === 'hola') {
+    // reduce to roughly 30% of width but cap around 480px
+    maxW = Math.min(window.innerWidth * 0.30, 480);
+    maxH = Math.min(window.innerHeight * 0.30, 480);
+  }
+
+  // - If on MOBILE and video is 'rem', make it smaller (reduced size on mobile).
+  if (mobile && infoObj && infoObj.id === 'rem') {
+    // reduce to roughly 45% of viewport width but cap around 360px
+    maxW = Math.min(window.innerWidth * 0.45, 360);
+    maxH = Math.min(window.innerHeight * 0.45, 640);
+  }
+
+  // Calculate scale to fit whole video ('contain') with caps
   const scale = Math.min(maxW / vw, maxH / vh, 1.0);
   const displayW = Math.max(120, Math.round(vw * scale));
   const displayH = Math.max(80, Math.round(vh * scale));
+
   fgContainer.style.width = displayW + 'px';
   fgContainer.style.height = displayH + 'px';
+
+  // canvas pixel size
   fgCanvas.width = displayW;
   fgCanvas.height = displayH;
-  // Offscreen: use video natural resolution with a cap for performance
+
+  // Offscreen: use video natural resolution but cap for perf
   const cap = 1280;
-  off.width = Math.min(video.videoWidth || displayW*2, cap);
-  off.height = Math.min(video.videoHeight || displayH*2, cap);
+  off.width = Math.min(video.videoWidth || displayW * 2, cap);
+  off.height = Math.min(video.videoHeight || displayH * 2, cap);
 }
 
 /* Chroma-key */
@@ -219,7 +245,7 @@ function applyChromaKey(imageData, settings) {
   return imageData;
 }
 
-/* Dibujar processed off canvas en fgCanvas con 'contain' para no recortar */
+/* draw processed off into visible canvas with 'contain' */
 function drawProcessedToScreen() {
   const cw = fgCanvas.width, ch = fgCanvas.height;
   const vw = off.width, vh = off.height;
@@ -234,10 +260,10 @@ function drawProcessedToScreen() {
 }
 
 /* Processing loop */
-function processLoop(video, currentVideoObj) {
+function processLoop(video, infoObj) {
   if (!usingChroma) return;
   if (video.paused || video.ended) {
-    animationId = requestAnimationFrame(()=>processLoop(video, currentVideoObj));
+    animationId = requestAnimationFrame(()=>processLoop(video, infoObj));
     return;
   }
 
@@ -264,7 +290,7 @@ function processLoop(video, currentVideoObj) {
     return;
   }
 
-  // settings: file:// -> controles; http(s) -> preset por vídeo
+  // settings: if file:// read from controls; else use video's preset
   let settings;
   if (protocol === 'file:') {
     settings = {
@@ -273,7 +299,7 @@ function processLoop(video, currentVideoObj) {
       soft: parseInt(softEl.value, 10)
     };
   } else {
-    settings = currentVideoObj && currentVideoObj.preset ? currentVideoObj.preset : { threshold:0.4, diff:30, soft:30 };
+    settings = infoObj && infoObj.preset ? infoObj.preset : { threshold:0.4, diff:30, soft:30 };
   }
   thVal.textContent = settings.threshold.toFixed(2);
   diffVal.textContent = settings.diff;
@@ -283,7 +309,7 @@ function processLoop(video, currentVideoObj) {
   offCtx.putImageData(processed, 0, 0);
   drawProcessedToScreen();
 
-  animationId = requestAnimationFrame(()=>processLoop(video, currentVideoObj));
+  animationId = requestAnimationFrame(()=>processLoop(video, infoObj));
 }
 
 /* Activar fallback: mostrar el video tal cual (sin chroma) */
@@ -295,34 +321,31 @@ function activateFallback(message) {
   noticeBox.style.display = 'block';
   if (animationId) cancelAnimationFrame(animationId);
   fgVideo.play().catch(()=>{ playOverlay.style.display = 'flex'; });
-  showContainer(); // aseguramos visibilidad
+  showContainer(); // garantizar visibilidad
 }
 
-/* Elegir posición aleatoria (left o right) antes de mostrar */
+/* Posicionar aleatoriamente a izquierda o derecha (siempre esquina) */
 function placeContainerRandomly() {
   const leftOrRight = Math.random() < 0.5 ? 'left' : 'right';
   // reset both then set chosen
   fgContainer.style.left = '';
   fgContainer.style.right = '';
-  if (leftOrRight === 'left') fgContainer.style.left = '20px';
-  else fgContainer.style.right = '20px';
-  // for very small screens we keep a small offset
-  if (window.innerWidth < 420) {
-    if (leftOrRight === 'left') fgContainer.style.left = '12px';
-    else fgContainer.style.right = '12px';
-  }
+  if (leftOrRight === 'left') fgContainer.style.left = (window.innerWidth < 420 ? '12px' : '20px');
+  else fgContainer.style.right = (window.innerWidth < 420 ? '12px' : '20px');
+  // Always anchored to bottom (never center)
+  fgContainer.style.top = '';
+  fgContainer.style.bottom = (window.innerWidth < 420 ? '12px' : '20px');
 }
 
 /* Mostrar container con animación (colocar aleatoriamente primero) */
 function showContainer() {
-  // position randomly each time it's shown
   placeContainerRandomly();
   fgContainer.style.display = 'flex';
   fgContainer.classList.remove('exit');
   requestAnimationFrame(()=> fgContainer.classList.add('enter'));
 }
 
-/* Ocultar container (transición) */
+/* Ocultar container (transición lenta) */
 function hideContainerInstantlyForTransition() {
   fgContainer.classList.remove('enter');
   fgContainer.classList.add('exit');
@@ -350,7 +373,7 @@ function playVideoClip(infoObj) {
   fgVideo.src = infoObj.src;
   fgVideo.load();
 
-  // En http(s) aplicamos presets del clip a los controles internos (aunque ocultos)
+  // Apply presets for http(s)
   if (protocol !== 'file:' && infoObj.preset) {
     thresholdEl.value = infoObj.preset.threshold;
     diffEl.value = infoObj.preset.diff;
@@ -362,22 +385,28 @@ function playVideoClip(infoObj) {
 
   fgVideo.addEventListener('loadedmetadata', function onMeta() {
     fgVideo.removeEventListener('loadedmetadata', onMeta);
-    adjustContainerToVideo(fgVideo);
 
+    // adjust container size with infoObj (so rules for hola/rem apply)
+    adjustContainerToVideo(fgVideo, infoObj);
+
+    // show canvas and hide native video element (we'll draw processed frames)
     fgCanvas.style.display = 'block';
     fgVideo.style.display = 'none';
 
+    // Try to play both videos (bg and front). If autoplay blocked, show overlay.
     const pVideoPlay = fgVideo.play().catch(()=>{});
     const pBgPlay = bgVideo.play().catch(()=>{});
     Promise.allSettled([pBgPlay, pVideoPlay]).then(results => {
       const anyRejected = results.some(r => r.status === 'rejected');
       if (anyRejected) playOverlay.style.display = 'flex';
       else playOverlay.style.display = 'none';
+      // start processing
       if (!animationId && usingChroma) animationId = requestAnimationFrame(()=>processLoop(fgVideo, infoObj));
+      // show container (positions randomly at corners)
       showContainer();
     });
 
-    // Cuando termine el clip, agarramos otro tras 3s
+    // When clip ends, schedule next after 3s (exclude current)
     fgVideo.onended = () => {
       scheduleNextVideo(3, infoObj.id);
     };
@@ -397,7 +426,7 @@ function init() {
   fgCanvas.style.display = 'none';
   fgVideo.style.display = 'none';
 
-  // Click en el recuadro -> schedule next after 3s (exclude current)
+  // Click en el container => schedule next after 3s (exclude current)
   fgContainer.addEventListener('click', () => {
     if (scheduledTimer) {
       clearTimeout(scheduledTimer);
@@ -432,13 +461,17 @@ function init() {
   if (!first) return;
   playVideoClip(first);
 
-  // On window resize, re-adjust container to current video aspect if available
+  // On window resize, re-adjust container for current clip and ensure corner placement remains
   window.addEventListener('resize', () => {
-    if (fgVideo.videoWidth && fgVideo.videoHeight) adjustContainerToVideo(fgVideo);
+    if (currentVideoObj && fgVideo.videoWidth && fgVideo.videoHeight) {
+      adjustContainerToVideo(fgVideo, currentVideoObj);
+      // always keep in corner
+      placeContainerRandomly();
+    }
   });
 }
 
-/* Lanzar init */
+/* Launch */
 init();
 
 </script>
