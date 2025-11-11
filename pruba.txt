@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fondo de vídeo + Chroma Key</title>
+<style>
+/* Reseteo y layout */
+html,body{height:100%;margin:0;padding:0;background:#000;}
+.stage{position:relative;width:100%;height:100vh;overflow:hidden;}
+
+
+/* Vídeo de fondo: ocupa toda la pantalla */
+video#bgVideo{
+position:fixed;inset:0; /* top/right/bottom/left 0 */
+width:100%;height:100%;object-fit:cover;
+z-index:0;pointer-events:none;
+}
+
+
+/* Canvas frontal (donde se pintará el vídeo sin el fondo verde) */
+canvas#fgCanvas{
+position:fixed;inset:0;z-index:1;display:block;
+width:100%;height:100%;
+/* permitimos transparencia para que se vea el vídeo de fondo */
+background:transparent;pointer-events:none;
+}
+
+
+/* Opcional: contenedor de controles (si quieres ajustar umbrales) */
+.controls{position:fixed;left:12px;bottom:12px;z-index:2;background:rgba(0,0,0,0.45);color:#fff;padding:10px;border-radius:8px;font-family:Arial;font-size:13px}
+.controls label{display:block;margin:6px 0}
+input[type=range]{width:180px}
+</style>
+</head>
+<body>
+<div class="stage">
+<!-- Vídeo de fondo: usa el enlace que indicaste -->
+<video id="bgVideo" autoplay muted loop playsinline crossorigin="anonymous">
+<source src="https://www.dropbox.com/scl/fi/ex4qhvjtx54blr92d0saj/yyyy.mp4?rlkey=ip9vhlhlsl1ye7el3onl1u2ug&st=f8o90thc&raw=1" type="video/mp4">
+Tu navegador no soporta vídeo.
+</video>
+
+
+<!-- Vídeo frontal (pantalla verde). Pon green.mp4 en la misma carpeta o cambia el src a la ruta correcta -->
+<video id="fgVideo" src="green.mp4" autoplay loop muted playsinline style="display:none"></video>
+
+
+<!-- Canvas donde dibujaremos el vídeo frontal con el verde eliminado -->
+<canvas id="fgCanvas"></canvas>
+
+
+<!-- Controles para ajustar el chroma-key (opcional) -->
+<div class="controls" id="controls">
+<div>Chroma key — ajustes (opcional)</div>
+<label>Umbral de verde: <span id="thVal">1.45</span>
+<input id="threshold" type="range" min="1.0" max="2.0" step="0.01" value="1.45">
+</label>
+<label>Diferencia mínima (G - max(R,B)): <span id="diffVal">40</span>
+<input id="diff" type="range" min="10" max="120" step="1" value="40">
+</label>
+<label>Suavizado (fade) alrededor del borde: <span id="softVal">10</span>
+<input id="soft" type="range" min="0" max="40" step="1" value="10">
+</label>
+</div>
+</div>
+
+
+<script>
+// Implementación de chroma-key simple usando canvas.
+// Idea:
+// 1) Dibujamos cada frame del vídeo "fgVideo" en un canvas offscreen
+// 2) Leemos los pixeles, y para los que cumplan la condición de ser "verde" les ponemos alpha=0
+// 3) Pintamos el resultado en el canvas visible (fgCanvas) que está por encima del vídeo de fondo
+
+
+const fgVideo = document.getElementById('fgVideo');
+const fgCanvas = document.getElementById('fgCanvas');
+const ctx = fgCanvas.getContext('2d', { alpha: true });
+
+
+// Offscreen para dibujar el frame original y tomar sus pixels
+const off = document.createElement('canvas');
+const offCtx = off.getContext('2d');
+
+
+// Controles
+const thresholdEl = document.getElementById('threshold');
+const diffEl = document.getElementById('diff');
+const softEl = document.getElementById('soft');
+const thVal = document.getElementById('thVal');

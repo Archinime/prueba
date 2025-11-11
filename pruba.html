@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fondo vídeo + chroma-key (hola.mp4)</title>
+  <style>
+    html,body { height:100%; margin:0; background:#000; font-family: Arial, sans-serif; }
+    .stage { position:relative; width:100%; height:100vh; overflow:hidden; }
+
+    /* Vídeo de fondo */
+    video#bgVideo {
+      position:fixed; inset:0; width:100%; height:100%; object-fit:cover;
+      z-index:0; pointer-events:none; background:#000;
+    }
+
+    /* Canvas donde pintamos el vídeo frontal procesado */
+    canvas#fgCanvas {
+      position:fixed; inset:0; width:100%; height:100%;
+      z-index:1; pointer-events:none; background:transparent; display:none;
+    }
+
+    /* Vídeo frontal (fallback): se mostrará sin recorte si chroma falla */
+    video#fgVideo {
+      position:fixed; inset:0; width:100%; height:100%; object-fit:cover;
+      z-index:2; pointer-events:none; display:none; background:transparent;
+    }
+
+    /* Controles */
+    .controls {
+      position:fixed; left:12px; bottom:12px; z-index:4;
+      background: rgba(0,0,0,0.45); color:#fff; padding:10px; border-radius:8px;
+      font-size:13px;
+    }
+    .controls label { display:block; margin:6px 0; }
+    input[type=range]{ width:180px; }
+
+    /* Overlay play si autoplay bloqueado */
+    .play-overlay {
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+      z-index:6; pointer-events:auto;
+    }
+    .play-btn {
+      background: rgba(0,0,0,0.6); color:#fff; border:2px solid #fff;
+      padding:18px 28px; border-radius:12px; font-size:20px; cursor:pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Mensajes */
+    .notice {
+      position:fixed; top:12px; right:12px; z-index:7; background:#ffb74d; color:#000;
+      padding:8px 12px; border-radius:8px; font-weight:600; display:none;
+    }
+    .error {
+      position:fixed; top:12px; left:12px; z-index:7; background:#ff4d4d; color:#fff;
+      padding:8px 12px; border-radius:8px; font-weight:600; display:none;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <!-- Fondo (tu link Dropbox) -->
+    <video id="bgVideo" autoplay muted loop playsinline>
+      <source src="https://www.dropbox.com/scl/fi/ex4qhvjtx54blr92d0saj/yyyy.mp4?rlkey=ip9vhlhlsl1ye7el3onl1u2ug&st=f8o90thc&raw=1" type="video/mp4">
+      Tu navegador no soporta vídeo.
+    </video>
+
+    <!-- Canvas para chroma-key -->
+    <canvas id="fgCanvas"></canvas>
+
+    <!-- Vídeo frontal local (usa hola.mp4 en la misma carpeta) -->
+    <video id="fgVideo" src="hola.mp4" muted loop playsinline crossorigin="anonymous"></video>
+
+    <!-- Controles -->
+    <div class="controls" id="controls">
+      <div style="font-weight:700; margin-bottom:6px;">Chroma key — Ajustes</div>
+      <label>Umbral de verde (sensibilidad): <span id="thVal">0.40</span>
+        <input id="threshold" type="range" min="0.0" max="1.0" step="0.01" value="0.40">
+      </label>
+      <label>Diferencia mínima G - max(R,B): <span id="diffVal">30</span>
+        <input id="diff" type="range" min="0" max="255" step="1" value="30">
+      </label>
+      <label>Suavizado (bordes): <span id="softVal">30</span>
+        <input id="soft" type="range" min="0" max="100" step="1" value="30">
+      </label>
+    </div>
+
+    <!-- Overlay play -->
+    <div class="play-overlay" id="playOverlay" style="display:none;">
+      <button class="play-btn" id="playBtn">Pulsar para iniciar</button>
+    </div>
+
+    <!-- Mensajes -->
+    <div id="noticeBox" class="notice">Chroma-key no disponible; mostrando vídeo sin recorte.</div>
+    <div id="errorBox" class="error">Error procesando el vídeo frontal (no se pueden leer píxeles).</div>
+  </div>
+
+<script>
+/* Configuración y lógica:
+   - Usa el elemento <video id="fgVideo"> con src="hola.mp4" para procesar.
+   - Si getImageData falla (CORS u otra restricción), activa fallback: muestra el video directamente.
+*/
+
+const fgCanvas = document.getElementById('fgCanvas');
+const ctx = fgCanvas.getContext('2d', { alpha: true });
+const fgVideo = document.getElementById('fgVideo');
+
+const thresholdEl = document.getElementById('threshold');
+const diffEl = document.getElementById('diff');
+const softEl = document.getElementById('soft');
+const thVal = document.getElementById('thVal');
+const diffVal = document.getElementById('diffVal');
+const softVal = document.getElementById('softVal');
+
+const noticeBox = document.getElementById('noticeBox');
+const errorBox = document.getElementById('errorBox');
+const playOverlay = document.getElementById('playOverlay');
+const playBtn = document.getElementById('playBtn');
+
+let off = document.createElement('canvas');
+let offCtx = off.getContext('2d');
+let animationId = null;
+let usingChroma = true; // intentamos chroma inicialmente
+
+function setCanvasSize() {
+  fgCanvas.width = window.innerWidth;
+  fgCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', setCanvasSize);
+
+function applyChromaKey(imageData, settings) {
+  const data = imageData.data;
+  const len = data.length;
+  const thresh = settings.threshold;
+  const minDiff = settings.diff;
+  const soften = settings.soft;
+  for (let i = 0; i < len; i += 4) {
+    const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+    if (a === 0) continue;
+    const maxrb = Math.max(r,b);
+    const sum = r + g + b + 1;
+    const greenScore = (g - maxrb) / sum;
+    const isGreenCandidate = (g - maxrb) > minDiff && greenScore > (thresh - 0.2);
+    if (!isGreenCandidate) {
+      data[i+3] = 255;
+      continue;
+    }
+    const diff = g - maxrb;
+    if (soften <= 0) {
+      data[i+3] = (diff > minDiff) ? 0 : 255;
+    } else {
+      const t = (diff - minDiff) / soften;
+      const clamped = Math.max(0, Math.min(1, t));
+      data[i+3] = Math.round((1 - clamped) * 255);
+    }
+  }
+  return imageData;
+}
+
+function drawProcessedToScreen(processedCanvas) {
+  const cw = fgCanvas.width, ch = fgCanvas.height;
+  const vw = processedCanvas.width, vh = processedCanvas.height;
+  ctx.clearRect(0,0,cw,ch);
+  const scale = Math.max(cw / vw, ch / vh);
+  const dw = vw * scale, dh = vh * scale;
+  const dx = (cw - dw) / 2, dy = (ch - dh) / 2;
+  ctx.drawImage(processedCanvas, 0, 0, vw, vh, dx, dy, dw, dh);
+}
+
+function activateFallback(message) {
+  usingChroma = false;
+  fgCanvas.style.display = 'none';
+  fgVideo.style.display = 'block'; // mostramos el video frontal sin recorte
+  noticeBox.textContent = message || 'Chroma-key no disponible; mostrando vídeo sin recorte.';
+  noticeBox.style.display = 'block';
+  if (animationId) cancelAnimationFrame(animationId);
+  fgVideo.play().catch(()=>{ playOverlay.style.display = 'flex'; });
+}
+
+function processLoop() {
+  if (!usingChroma) return;
+  if (fgVideo.paused || fgVideo.ended) {
+    animationId = requestAnimationFrame(processLoop);
+    return;
+  }
+
+  // Ajustar offscreen a resolución del vídeo si está disponible
+  if (fgVideo.videoWidth && fgVideo.videoHeight &&
+      (off.width !== fgVideo.videoWidth || off.height !== fgVideo.videoHeight)) {
+    off.width = fgVideo.videoWidth;
+    off.height = fgVideo.videoHeight;
+  }
+
+  try {
+    offCtx.drawImage(fgVideo, 0, 0, off.width, off.height);
+  } catch (err) {
+    console.error('drawImage falló (posible restricción):', err);
+    activateFallback('No se pueden leer píxeles; mostrando vídeo sin recorte.');
+    return;
+  }
+
+  let frame;
+  try {
+    frame = offCtx.getImageData(0, 0, off.width, off.height);
+  } catch (err) {
+    console.error('getImageData falló (CORS/seguridad):', err);
+    activateFallback('No se pueden leer píxeles; mostrando vídeo sin recorte.');
+    return;
+  }
+
+  const settings = {
+    threshold: parseFloat(thresholdEl.value),
+    diff: parseInt(diffEl.value, 10),
+    soft: parseInt(softEl.value, 10)
+  };
+  thVal.textContent = settings.threshold.toFixed(2);
+  diffVal.textContent = settings.diff;
+  softVal.textContent = settings.soft;
+
+  const processed = applyChromaKey(frame, settings);
+  offCtx.putImageData(processed, 0, 0);
+  drawProcessedToScreen(off);
+
+  animationId = requestAnimationFrame(processLoop);
+}
+
+/* Manejo autoplay: intentamos reproducir; si se bloquea, mostramos botón */
+function tryAutoplay() {
+  const bg = document.getElementById('bgVideo');
+  Promise.allSettled([bg.play(), fgVideo.play()]).then(results => {
+    const anyRejected = results.some(r => r.status === 'rejected');
+    if (anyRejected) {
+      playOverlay.style.display = 'flex';
+    } else {
+      // si autoplay OK, mostrar canvas y arrancar loop
+      fgCanvas.style.display = 'block';
+      fgVideo.style.display = 'none'; // usamos canvas con chroma
+      if (!animationId) animationId = requestAnimationFrame(processLoop);
+    }
+  });
+}
+
+/* Botón play */
+playBtn.addEventListener('click', () => {
+  playOverlay.style.display = 'none';
+  document.getElementById('bgVideo').play().catch(()=>{});
+  fgVideo.play().then(() => {
+    // arrancar chroma cuando el vídeo empiece
+    fgCanvas.style.display = 'block';
+    fgVideo.style.display = 'none';
+    if (!animationId) animationId = requestAnimationFrame(processLoop);
+  }).catch(() => {
+    // si no puede reproducir, mostrar fallback visible y avisar
+    activateFallback('El navegador impidió reproducir automáticamente. Pulsa reproducir en el vídeo si es necesario.');
+  });
+});
+
+/* Eventos iniciales */
+fgVideo.addEventListener('loadedmetadata', () => {
+  setCanvasSize();
+  off.width = fgVideo.videoWidth || Math.max(640, window.innerWidth);
+  off.height = fgVideo.videoHeight || Math.max(360, window.innerHeight);
+});
+
+fgVideo.addEventListener('error', (e) => {
+  console.error('Error cargando hola.mp4', e);
+  activateFallback('Error cargando el vídeo frontal. Mostrando fallback (si es posible).');
+});
+
+/* Start */
+setCanvasSize();
+tryAutoplay();
+
+</script>
+</body>
+</html>
