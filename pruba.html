@@ -15,10 +15,12 @@
       z-index:0; pointer-events:none; background:#000;
     }
 
-    /* Contenedor adaptable para el frontal */
+    /* Contenedor adaptable para el frontal
+       -> Se quitaron fondo, sombra y cualquier marco visible para que no parezca recuadro */
     #fgContainer {
       position:fixed;
-      right:20px; bottom:20px;
+      /* left/right se asignan dinámicamente (aleatorio) */
+      bottom:20px;
       z-index:5;
       pointer-events:auto;
       display:flex; align-items:center; justify-content:center;
@@ -26,12 +28,13 @@
       opacity: 0;
       transition: transform 280ms ease-out, opacity 220ms ease-out;
       will-change: transform, opacity;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      border-radius: 8px;
       overflow: hidden;
-      background: rgba(0,0,0,0.04);
       min-width: 120px; min-height: 80px;
       max-width: calc(70vw); max-height: calc(70vh);
+      /* removed box-shadow and background to hide any visible frame */
+      box-shadow: none;
+      background: transparent;
+      border-radius: 0;
     }
 
     /* Entrada / salida */
@@ -72,7 +75,7 @@
     .error  { position:fixed; top:12px; left:12px; z-index:10; background:#ff4d4d; color:#fff; padding:8px 12px; border-radius:8px; font-weight:600; display:none; }
 
     @media (max-width:420px) {
-      #fgContainer { right:12px; bottom:12px; }
+      #fgContainer { bottom:12px; }
     }
   </style>
 </head>
@@ -84,7 +87,7 @@
       Tu navegador no soporta vídeo.
     </video>
 
-    <!-- Contenedor adaptable para el frontal -->
+    <!-- Contenedor adaptable para el frontal (sin marco visible) -->
     <div id="fgContainer" aria-label="Vídeo frontal">
       <canvas id="fgCanvas"></canvas>
       <video id="fgVideo" muted loop playsinline></video>
@@ -141,18 +144,13 @@ let offCtx = off.getContext('2d');
 let animationId = null;
 let usingChroma = true;
 let scheduledTimer = null;
+let currentVideoObj = null;
 
-/* Lista de vídeos: añade aquí más vídeos si lo deseas.
-   Cada entrada tiene: id (nombre), src (ruta local), preset (valores para http/https),
-   y opcionalmente valores por defecto para file:// (pero file:// muestra controles).
-*/
+/* Lista de vídeos: cada uno con su preset de chroma */
 const videoList = [
   { id: 'hola', src: 'hola.mp4', preset: { threshold: 0.25, diff: 0, soft: 100 } },
   { id: 'rem',  src: 'rem.mp4',  preset: { threshold: 0.50, diff: 40, soft: 30  } }
 ];
-
-/* Preset HTTP: se aplicarán los presets de cada video cuando la página esté en http(s) */
-const PRESET_HTTP = null; // no usado globalmente: aplicamos por vídeo
 
 /* UTIL: seleccionar vídeo aleatorio distinto del actual (si posible) */
 function pickRandomVideo(excludeId) {
@@ -167,10 +165,8 @@ function pickRandomVideo(excludeId) {
 function setupControlsByProtocol() {
   if (protocol === 'file:') {
     controls.style.display = 'block';
-    // dejar valores por defecto editables por el usuario
   } else {
     controls.style.display = 'none';
-    // en http(s) no usamos estos controles globales: aplicamos presets por vídeo cuando cargamos cada vídeo
   }
 }
 
@@ -187,13 +183,13 @@ function adjustContainerToVideo(video) {
   fgContainer.style.height = displayH + 'px';
   fgCanvas.width = displayW;
   fgCanvas.height = displayH;
-  // Offscreen: use vídeo natural resolución con tope para rendimiento
+  // Offscreen: use video natural resolution with a cap for performance
   const cap = 1280;
   off.width = Math.min(video.videoWidth || displayW*2, cap);
   off.height = Math.min(video.videoHeight || displayH*2, cap);
 }
 
-/* Chroma-key (idéntico algoritmo) */
+/* Chroma-key */
 function applyChromaKey(imageData, settings) {
   const data = imageData.data;
   const len = data.length;
@@ -223,7 +219,7 @@ function applyChromaKey(imageData, settings) {
   return imageData;
 }
 
-/* Draw processed off canvas into fgCanvas using 'contain' */
+/* Dibujar processed off canvas en fgCanvas con 'contain' para no recortar */
 function drawProcessedToScreen() {
   const cw = fgCanvas.width, ch = fgCanvas.height;
   const vw = off.width, vh = off.height;
@@ -268,7 +264,7 @@ function processLoop(video, currentVideoObj) {
     return;
   }
 
-  // Si estamos en http/https aplicamos el preset del vídeo; si estamos en file:// tomamos valores de los controles
+  // settings: file:// -> controles; http(s) -> preset por vídeo
   let settings;
   if (protocol === 'file:') {
     settings = {
@@ -277,7 +273,6 @@ function processLoop(video, currentVideoObj) {
       soft: parseInt(softEl.value, 10)
     };
   } else {
-    // usar preset guardado en el objeto currentVideoObj
     settings = currentVideoObj && currentVideoObj.preset ? currentVideoObj.preset : { threshold:0.4, diff:30, soft:30 };
   }
   thVal.textContent = settings.threshold.toFixed(2);
@@ -300,34 +295,46 @@ function activateFallback(message) {
   noticeBox.style.display = 'block';
   if (animationId) cancelAnimationFrame(animationId);
   fgVideo.play().catch(()=>{ playOverlay.style.display = 'flex'; });
-  showContainer();
+  showContainer(); // aseguramos visibilidad
 }
 
-/* Mostrar container con animación */
+/* Elegir posición aleatoria (left o right) antes de mostrar */
+function placeContainerRandomly() {
+  const leftOrRight = Math.random() < 0.5 ? 'left' : 'right';
+  // reset both then set chosen
+  fgContainer.style.left = '';
+  fgContainer.style.right = '';
+  if (leftOrRight === 'left') fgContainer.style.left = '20px';
+  else fgContainer.style.right = '20px';
+  // for very small screens we keep a small offset
+  if (window.innerWidth < 420) {
+    if (leftOrRight === 'left') fgContainer.style.left = '12px';
+    else fgContainer.style.right = '12px';
+  }
+}
+
+/* Mostrar container con animación (colocar aleatoriamente primero) */
 function showContainer() {
+  // position randomly each time it's shown
+  placeContainerRandomly();
   fgContainer.style.display = 'flex';
   fgContainer.classList.remove('exit');
   requestAnimationFrame(()=> fgContainer.classList.add('enter'));
 }
 
-/* Ocultar con animación (usado para transición entre vídeos durante los 3s) */
+/* Ocultar container (transición) */
 function hideContainerInstantlyForTransition() {
   fgContainer.classList.remove('enter');
   fgContainer.classList.add('exit');
-  // no ocultamos por completo; lo dejamos para volver a mostrar cuando inicie el siguiente
 }
 
-/* Cambiar a un nuevo vídeo (aleatorio) con delay opcional (3s) y animaciones */
+/* scheduleNextVideo con delay (3s) */
 function scheduleNextVideo(afterSeconds = 3, excludeId = null) {
-  // cancelar cualquier timer previo
   if (scheduledTimer) {
     clearTimeout(scheduledTimer);
     scheduledTimer = null;
   }
-
-  // animación de salida inmediata
   hideContainerInstantlyForTransition();
-
   scheduledTimer = setTimeout(() => {
     const next = pickRandomVideo(excludeId);
     if (!next) return;
@@ -335,15 +342,15 @@ function scheduleNextVideo(afterSeconds = 3, excludeId = null) {
   }, afterSeconds * 1000);
 }
 
-/* Reproduce el clip infoObj (obj de videoList) */
+/* Reproduce el clip infoObj */
 function playVideoClip(infoObj) {
   if (!infoObj) return;
-  // Preparar elemento de video con la fuente
-  usingChroma = true; // intentamos chroma (si falla, activateFallback lo ajustará)
+  currentVideoObj = infoObj;
+  usingChroma = true;
   fgVideo.src = infoObj.src;
   fgVideo.load();
 
-  // Aplicar presets para http(s): si protocolo http(s) aplicamos al control visual (aunque controles estén ocultos)
+  // En http(s) aplicamos presets del clip a los controles internos (aunque ocultos)
   if (protocol !== 'file:' && infoObj.preset) {
     thresholdEl.value = infoObj.preset.threshold;
     diffEl.value = infoObj.preset.diff;
@@ -353,62 +360,50 @@ function playVideoClip(infoObj) {
     softVal.textContent = infoObj.preset.soft;
   }
 
-  // Cuando metadata lista adaptamos el contenedor y arrancamos reproducción + procesamiento
   fgVideo.addEventListener('loadedmetadata', function onMeta() {
     fgVideo.removeEventListener('loadedmetadata', onMeta);
     adjustContainerToVideo(fgVideo);
 
-    // Mostrar canvas (cuando chroma posible)
     fgCanvas.style.display = 'block';
     fgVideo.style.display = 'none';
 
-    // Intentar reproducir; si autoplay bloqueado, el play() fallará -> boton visible
     const pVideoPlay = fgVideo.play().catch(()=>{});
     const pBgPlay = bgVideo.play().catch(()=>{});
     Promise.allSettled([pBgPlay, pVideoPlay]).then(results => {
-      // si alguna promesa rechaza, dejamos overlay para que usuario pulse
       const anyRejected = results.some(r => r.status === 'rejected');
       if (anyRejected) playOverlay.style.display = 'flex';
       else playOverlay.style.display = 'none';
-      // Iniciar loop de procesamiento
       if (!animationId && usingChroma) animationId = requestAnimationFrame(()=>processLoop(fgVideo, infoObj));
-      // mostrar con animación
       showContainer();
     });
 
-    // configurar handler para "ended" del clip: cuando termine, schedule next after 3s
+    // Cuando termine el clip, agarramos otro tras 3s
     fgVideo.onended = () => {
-      // schedule next excluding the current to reduce immediate repeats
       scheduleNextVideo(3, infoObj.id);
     };
   });
 
-  // Manejar errores de carga del archivo
   fgVideo.onerror = (e) => {
     console.error('Error cargando clip:', infoObj.src, e);
     activateFallback('Error cargando el clip. Mostrando fallback (sin recorte).');
   };
 }
 
-/* Inicialización: al cargar la página se reproduce un clip aleatorio */
+/* Inicialización */
 function init() {
   setupControlsByProtocol();
 
-  // Inicialmente ocultamos canvas/video y container; lo mostraremos al reproducir
   fgContainer.style.display = 'none';
   fgCanvas.style.display = 'none';
   fgVideo.style.display = 'none';
 
-  // Click en el recuadro: en lugar de ocultar, programa otro vídeo aleatorio tras 3s
+  // Click en el recuadro -> schedule next after 3s (exclude current)
   fgContainer.addEventListener('click', () => {
-    // cancelamos cualquier scheduledTimer para evitar múltiples disparos simultáneos
     if (scheduledTimer) {
       clearTimeout(scheduledTimer);
       scheduledTimer = null;
     }
-    // Schedule next after 3s, excluding current clip id if possible
     const currentSrc = fgVideo.src ? fgVideo.src.split('/').pop() : null;
-    // find current id in list (match by filename)
     let currentId = null;
     if (currentSrc) {
       for (const v of videoList) {
@@ -418,25 +413,29 @@ function init() {
     scheduleNextVideo(3, currentId);
   });
 
-  // Play overlay button: intenta iniciar reproducción
+  // Play overlay button
   playBtn.addEventListener('click', () => {
     playOverlay.style.display = 'none';
     bgVideo.play().catch(()=>{});
     fgVideo.play().catch(()=>{});
   });
 
-  // Si hay controles (file://), mostrar valores en UI cuando cambien
+  // Controls UI updates (only relevant on file://)
   [thresholdEl, diffEl, softEl].forEach(el => el.addEventListener('input', () => {
     thVal.textContent = parseFloat(thresholdEl.value).toFixed(2);
     diffVal.textContent = diffEl.value;
     softVal.textContent = softEl.value;
   }));
 
-  // Al arrancar, elegir un vídeo aleatorio para iniciar
+  // Start with a random clip
   const first = pickRandomVideo(null);
-  // Si no hay vídeos definidos no hacemos nada
   if (!first) return;
   playVideoClip(first);
+
+  // On window resize, re-adjust container to current video aspect if available
+  window.addEventListener('resize', () => {
+    if (fgVideo.videoWidth && fgVideo.videoHeight) adjustContainerToVideo(fgVideo);
+  });
 }
 
 /* Lanzar init */
