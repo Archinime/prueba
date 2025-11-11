@@ -3,27 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Fondo + Chroma (ventana pequeña en esquina)</title>
+  <title>Fondo + Chroma (ventana adaptable a aspecto del vídeo)</title>
   <style>
-    /* Reset básico */
+    /* Reset */
     html,body { height:100%; margin:0; background:#000; font-family: Arial, sans-serif; }
     .stage { position:relative; width:100%; height:100vh; overflow:hidden; }
 
-    /* Vídeo de fondo */
+    /* Fondo */
     video#bgVideo {
-      position:fixed; inset:0;
-      width:100%; height:100%; object-fit:cover;
+      position:fixed; inset:0; width:100%; height:100%; object-fit:cover;
       z-index:0; pointer-events:none; background:#000;
     }
 
-    /* Contenedor pequeño en esquina para el elemento frontal (canvas o video fallback) */
+    /* Contenedor adaptable: tamaño se asigna por JS según el aspecto del vídeo */
     #fgContainer {
       position:fixed;
       right:20px; bottom:20px;
-      width:360px;    /* ancho reducido - cambia si quieres */
-      height:202px;   /* alto acorde (16:9 ~ 360x202) */
       z-index:5;
-      pointer-events:auto; /* permitimos clic para cerrar */
+      pointer-events:auto;
       display:flex; align-items:center; justify-content:center;
       transform: translateY(30px);
       opacity: 0;
@@ -32,34 +29,26 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       border-radius: 8px;
       overflow: hidden;
-      background: rgba(0,0,0,0.05);
+      background: rgba(0,0,0,0.04);
+      min-width: 120px; min-height: 80px;
+      max-width: calc(70vw); max-height: calc(70vh);
     }
 
-    /* estado visible (entrada desde abajo) */
-    #fgContainer.enter {
-      transform: translateY(0);
-      opacity: 1;
-    }
+    /* Entrada / salida */
+    #fgContainer.enter { transform: translateY(0); opacity: 1; }
+    #fgContainer.exit  { transform: translateY(60px); opacity: 0; }
 
-    /* estado de salida (bajar y desaparecer) */
-    #fgContainer.exit {
-      transform: translateY(60px);
-      opacity: 0;
-    }
-
-    /* Canvas visible (será exactamente el tamaño del contenedor) */
-    canvas#fgCanvas {
+    /* Canvas y vídeo: ocupan todo el contenedor. Canvas usado para chroma (display block cuando activo) */
+    canvas#fgCanvas, video#fgVideo {
       width:100%; height:100%; display:block;
-      pointer-events:none; /* el click lo recibe el contenedor */
+      pointer-events:none;
+      object-fit: contain; /* importante: muestra todo el vídeo sin recortar */
       background: transparent;
     }
+    /* Inicialmente canvas visible (si chroma ok) — display toggled by JS */
+    canvas#fgCanvas { display:none; }
 
-    /* Vídeo fallback (si no podemos chroma): lo mostramos dentro del mismo contenedor */
-    video#fgVideo {
-      width:100%; height:100%; object-fit:cover; display:none;
-    }
-
-    /* Controles: SOLO visibles en file:// (controlado por JS) */
+    /* Controls (solo file://) */
     .controls {
       position:fixed; left:12px; bottom:12px; z-index:6;
       background: rgba(0,0,0,0.55); color:#fff; padding:10px; border-radius:8px;
@@ -68,7 +57,7 @@
     .controls label { display:block; margin:6px 0; }
     input[type=range]{ width:180px; }
 
-    /* Botón grande si autoplay bloqueado */
+    /* Play overlay */
     .play-overlay {
       position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
       z-index:9; pointer-events:auto;
@@ -78,41 +67,38 @@
       padding:14px 22px; border-radius:12px; font-size:18px; cursor:pointer;
     }
 
-    /* Mensajes cortos */
+    /* Mensajes */
     .notice { position:fixed; top:12px; right:12px; z-index:10; background:#ffb74d; color:#000; padding:8px 12px; border-radius:8px; font-weight:600; display:none; }
     .error  { position:fixed; top:12px; left:12px; z-index:10; background:#ff4d4d; color:#fff; padding:8px 12px; border-radius:8px; font-weight:600; display:none; }
 
-    /* Pequeño borde para indicar que se puede clicar (opcional) */
+    /* Hint */
     #fgContainer .hint {
-      position:absolute; left:8px; top:6px; z-index:6; font-size:12px; color:rgba(255,255,255,0.85);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+      position:absolute; left:8px; top:6px; z-index:6; font-size:12px; color:rgba(255,255,255,0.95);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+      pointer-events:none;
     }
 
     @media (max-width:420px) {
-      /* reducir en pantallas muy pequeñas */
-      #fgContainer { width:260px; height:146px; right:12px; bottom:12px; }
+      #fgContainer { right:12px; bottom:12px; }
     }
   </style>
 </head>
 <body>
   <div class="stage">
-    <!-- Fondo (tu link Dropbox) -->
+    <!-- Fondo -->
     <video id="bgVideo" autoplay muted loop playsinline>
       <source src="https://www.dropbox.com/scl/fi/ex4qhvjtx54blr92d0saj/yyyy.mp4?rlkey=ip9vhlhlsl1ye7el3onl1u2ug&st=f8o90thc&raw=1" type="video/mp4">
       Tu navegador no soporta vídeo.
     </video>
 
-    <!-- Contenedor pequeño para el elemento frontal (canvas procesado o video fallback) -->
-    <div id="fgContainer" aria-label="Vídeo frontal (click para cerrar)">
+    <!-- Contenedor adaptable para el frontal -->
+    <div id="fgContainer" aria-label="Vídeo frontal (haz clic para ocultar)">
       <div class="hint">Haz clic para ocultar</div>
-      <!-- Canvas que mostrará el resultado del chroma-key (si está disponible) -->
-      <canvas id="fgCanvas" width="360" height="202"></canvas>
-
-      <!-- Vídeo fallback (se mostrará si chroma no es posible) -->
+      <canvas id="fgCanvas"></canvas>
       <video id="fgVideo" src="hola.mp4" muted loop playsinline></video>
     </div>
 
-    <!-- Controles: aparecerán SOLO si page protocol === 'file:' (JS los muestra/oculta) -->
+    <!-- Controles (JS decide mostrar si file://) -->
     <div class="controls" id="controls" style="display:none;">
       <div style="font-weight:700; margin-bottom:6px;">Chroma key — Ajustes (solo file://)</div>
       <label>Umbral de verde (sensibilidad): <span id="thVal">0.40</span>
@@ -126,7 +112,7 @@
       </label>
     </div>
 
-    <!-- Overlay play si autoplay bloqueado -->
+    <!-- Play overlay -->
     <div class="play-overlay" id="playOverlay" style="display:none;">
       <button class="play-btn" id="playBtn">Pulsar para iniciar</button>
     </div>
@@ -137,11 +123,11 @@
   </div>
 
 <script>
-/* Variables y elementos */
+/* Elementos y variables */
 const protocol = location.protocol; // 'file:', 'http:', 'https:'
 const fgContainer = document.getElementById('fgContainer');
 const fgCanvas = document.getElementById('fgCanvas');
-const fgVideo = document.getElementById('fgVideo'); // fallback local hola.mp4
+const fgVideo = document.getElementById('fgVideo'); // hola.mp4 local
 const bgVideo = document.getElementById('bgVideo');
 const ctx = fgCanvas.getContext('2d', { alpha: true });
 
@@ -161,18 +147,17 @@ const errorBox = document.getElementById('errorBox');
 let off = document.createElement('canvas');
 let offCtx = off.getContext('2d');
 let animationId = null;
-let usingChroma = true; // inicialmente intentamos chroma
+let usingChroma = true;
 
-/* PRESETS: para http/https queremos los valores personalizados que pediste */
+/* Preset para HTTP(S) */
 const PRESET_HTTP = { threshold: 0.25, diff: 0, soft: 100 };
 
-/* Detectar entorno: si estamos abriendo con file:// mostramos controles, sino ocultamos y aplicamos preset */
+/* Mostrar/ocultar controles según protocolo */
 function setupControlsByProtocol() {
   if (protocol === 'file:') {
     controls.style.display = 'block';
-    // dejar los valores por defecto como están (usuario puede ajustar)
+    // mantener valores iniciales
   } else {
-    // http/https: ocultar controles y aplicar preset
     controls.style.display = 'none';
     thresholdEl.value = PRESET_HTTP.threshold;
     diffEl.value = PRESET_HTTP.diff;
@@ -183,14 +168,36 @@ function setupControlsByProtocol() {
   }
 }
 
-/* Aplicar chroma-key a ImageData (idéntico algoritmo pero parametrizable) */
+/* Ajustar tamaño del contenedor según la relación de aspecto del vídeo */
+function adjustContainerToVideo(video) {
+  const vw = video.videoWidth || 16;
+  const vh = video.videoHeight || 9;
+  // límites: no más del 70vw / 70vh; tampoco queremos que crezca demasiado en pantallas grandes
+  const maxW = Math.min(window.innerWidth * 0.7, 800); // px
+  const maxH = Math.min(window.innerHeight * 0.7, 800);
+  // calc scale to fit (contain)
+  const scale = Math.min(maxW / vw, maxH / vh, 1.0);
+  const displayW = Math.max(120, Math.round(vw * scale)); // min width safeguard
+  const displayH = Math.max(80, Math.round(vh * scale));
+  // apply to container
+  fgContainer.style.width = displayW + 'px';
+  fgContainer.style.height = displayH + 'px';
+  // set canvas pixel size to match container for crisp rendering
+  fgCanvas.width = displayW;
+  fgCanvas.height = displayH;
+  // Offscreen: use video natural resolution but cap to 1280x1280 for perf
+  const cap = 1280;
+  off.width = Math.min(video.videoWidth || displayW, cap);
+  off.height = Math.min(video.videoHeight || displayH, cap);
+}
+
+/* Chroma-key algorithm */
 function applyChromaKey(imageData, settings) {
   const data = imageData.data;
   const len = data.length;
   const thresh = settings.threshold;
   const minDiff = settings.diff;
   const soften = settings.soft;
-
   for (let i = 0; i < len; i += 4) {
     const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
     if (a === 0) continue;
@@ -214,21 +221,22 @@ function applyChromaKey(imageData, settings) {
   return imageData;
 }
 
-/* Dibujar processed off canvas escalado al tamaño del canvas visible (la caja reducida) */
+/* Draw processed off canvas into fgCanvas using 'contain' (show whole video) */
 function drawProcessedToScreen() {
-  // off is the processing canvas with natural/video resolution
   const cw = fgCanvas.width, ch = fgCanvas.height;
   const vw = off.width, vh = off.height;
   ctx.clearRect(0,0,cw,ch);
   if (vw === 0 || vh === 0) return;
-  // cover-stretch en la pequeña caja (si quieres 'contain' cambia la lógica)
-  const scale = Math.max(cw / vw, ch / vh);
-  const dw = vw * scale, dh = vh * scale;
-  const dx = (cw - dw)/2, dy = (ch - dh)/2;
-  ctx.drawImage(off, 0,0, vw, vh, dx, dy, dw, dh);
+  // contain scale (fit whole)
+  const scale = Math.min(cw / vw, ch / vh);
+  const dw = Math.round(vw * scale);
+  const dh = Math.round(vh * scale);
+  const dx = Math.round((cw - dw) / 2);
+  const dy = Math.round((ch - dh) / 2);
+  ctx.drawImage(off, 0, 0, vw, vh, dx, dy, dw, dh);
 }
 
-/* Loop de proceso del chroma-key */
+/* Processing loop */
 function processLoop(video) {
   if (!usingChroma) return;
   if (video.paused || video.ended) {
@@ -236,11 +244,11 @@ function processLoop(video) {
     return;
   }
 
-  // ajustar off a resolución del vídeo si se puede
+  // Adjust off to video resolution if changed (cap applied earlier)
   if (video.videoWidth && video.videoHeight &&
-      (off.width !== video.videoWidth || off.height !== video.videoHeight)) {
-    off.width = video.videoWidth;
-    off.height = video.videoHeight;
+      (off.width !== Math.min(video.videoWidth,1280) || off.height !== Math.min(video.videoHeight,1280))) {
+    off.width = Math.min(video.videoWidth, 1280);
+    off.height = Math.min(video.videoHeight, 1280);
   }
 
   try {
@@ -253,7 +261,7 @@ function processLoop(video) {
 
   let frame;
   try {
-    frame = offCtx.getImageData(0,0, off.width, off.height);
+    frame = offCtx.getImageData(0, 0, off.width, off.height);
   } catch (err) {
     console.error('getImageData error (CORS):', err);
     activateFallback('No se pudieron leer píxeles (CORS). Mostrando vídeo sin recorte.');
@@ -276,51 +284,42 @@ function processLoop(video) {
   animationId = requestAnimationFrame(()=>processLoop(video));
 }
 
-/* Fallback: mostrar el vídeo tal cual (sin chroma) en el mismo contenedor */
+/* Fallback: show video element without chroma */
 function activateFallback(message) {
   usingChroma = false;
-  // ocultar canvas y mostrar elemento video fallback
   fgCanvas.style.display = 'none';
   fgVideo.style.display = 'block';
   noticeBox.textContent = message || 'Chroma-key no disponible; mostrando vídeo sin recorte.';
   noticeBox.style.display = 'block';
   if (animationId) cancelAnimationFrame(animationId);
-  // intentar play; si falla, mostrará overlay para iniciar
   fgVideo.play().catch(()=>{ playOverlay.style.display = 'flex'; });
-  // asegurar que el contenedor esté visible
   showContainer();
 }
 
-/* Mostrar el contenedor con animación desde abajo */
+/* Show container (entry animation) */
 function showContainer() {
-  // for entrada: add .enter class (refresh for animation)
+  fgContainer.style.display = 'flex';
   fgContainer.classList.remove('exit');
-  // allow next frame to transition
   requestAnimationFrame(()=> fgContainer.classList.add('enter'));
 }
 
-/* Ocultar contenedor con animación y luego ocultarlo del DOM visual */
+/* Hide container with animation */
 function hideContainerWithAnimation() {
   fgContainer.classList.remove('enter');
   fgContainer.classList.add('exit');
-  // tras la transición (300ms) esconderlo (para que no cambie foco)
   setTimeout(()=> {
     fgContainer.style.display = 'none';
-    // opcional: stop playback/loop
     try { fgVideo.pause(); } catch(e){}
     if (animationId) cancelAnimationFrame(animationId);
   }, 340);
 }
 
-/* Manejo de autoplay: si se bloquea mostramos botón */
+/* Try autoplay */
 function tryAutoplayBoth(procVideo) {
   const p1 = bgVideo.play().catch(()=>{});
   let p2;
-  if (procVideo) {
-    p2 = procVideo.play().catch(()=>{});
-  } else {
-    p2 = fgVideo.play().catch(()=>{});
-  }
+  if (procVideo) p2 = procVideo.play().catch(()=>{});
+  else p2 = fgVideo.play().catch(()=>{});
   Promise.allSettled([p1, p2]).then(results => {
     const anyRejected = results.some(r => r.status === 'rejected');
     if (anyRejected) {
@@ -338,82 +337,71 @@ function tryAutoplayBoth(procVideo) {
   });
 }
 
-/* Inicialización principal: usamos el vídeo local hola.mp4 para procesar (same origin expected when hosted together)
-   Si el navegador impide leer pixels (por ejemplo cuando se abre via file:// con ciertas restricciones o por CORS),
-   el código activará fallback. */
+/* Inicialización */
 function init() {
   setupControlsByProtocol();
 
-  // garantizamos que canvas tenga las dimensiones de la caja reducida
-  const containerStyle = window.getComputedStyle(fgContainer);
-  const width = parseInt(containerStyle.width,10) || fgCanvas.width;
-  const height = parseInt(containerStyle.height,10) || fgCanvas.height;
-  fgCanvas.width = width;
-  fgCanvas.height = height;
+  // prepare container initial hidden state
+  fgContainer.style.display = 'none';
 
-  // Preparamos off canvas razonable; se ajustará cuando loadedmetadata llegue
-  off.width = Math.max(640, fgCanvas.width * 2);
-  off.height = Math.max(360, fgCanvas.height * 2);
-
-  // Intentamos usar fgVideo (hola.mp4) como vídeo de procesamiento
-  // Si la página está en http/https *y* hola.mp4 está en misma servidor, chromakey debería funcionar.
-  // Si se abre en file:// y navegador lo permite, también debería funcionar. Si no -> fallback.
-  // Escuchamos loadedmetadata para configurar off a resolución natural
+  // When video metadata loaded, adapt container to video's aspect ratio
   fgVideo.addEventListener('loadedmetadata', () => {
-    off.width = fgVideo.videoWidth || off.width;
-    off.height = fgVideo.videoHeight || off.height;
+    adjustContainerToVideo(fgVideo);
+
+    // If HTTP/HTTPS, we use preset values already set earlier; if file:// user can adjust
+    // Try autoplay and start chroma processing (processing will fall back on CORS errors)
+    // Show canvas initially and start processing
+    fgCanvas.style.display = 'block';
+    fgVideo.style.display = 'none';
+    tryAutoplayBoth(fgVideo);
+    // Start processing loop (will handle CORS/getImageData errors)
+    if (!animationId && usingChroma) animationId = requestAnimationFrame(()=>processLoop(fgVideo));
   });
 
+  // handle load errors
   fgVideo.addEventListener('error', (e) => {
     console.error('Error cargando hola.mp4', e);
     activateFallback('Error cargando el vídeo frontal. Mostrando fallback (sin recorte).');
   });
 
-  // Intentamos arrancar chroma: requerirá que fgVideo pueda reproducirse y que getImageData funcione
-  // Por seguridad, intentamos reproducir el video en background; si autoplay bloqueado, mostramos botón
-  // Para proteger contra errores CORS, el loop de processLoop manejará y activará fallback si getImageData falla
-  tryAutoplayBoth(fgVideo);
-
-  // Si el usuario abre via file://, dejamos controles visibles; sino (http/https) aplicamos presets
-  // (esto ya hecho en setupControlsByProtocol)
-}
-
-/* Click en el contenedor => hacer desaparecer con animación */
-fgContainer.addEventListener('click', (e) => {
-  // Solo responder si está visible
-  if (fgContainer.style.display === 'none') return;
-  hideContainerWithAnimation();
-});
-
-/* Botón play */
-playBtn.addEventListener('click', () => {
-  playOverlay.style.display = 'none';
-  // intentar reproducir ambos elementos
-  bgVideo.play().catch(()=>{});
-  fgVideo.play().then(()=> {
-    // si usingChroma true, lanzamos loop
-    if (usingChroma) {
-      fgCanvas.style.display = 'block';
-      fgVideo.style.display = 'none';
-      if (!animationId) animationId = requestAnimationFrame(()=>processLoop(fgVideo));
-    } else {
-      fgVideo.style.display = 'block';
-      fgCanvas.style.display = 'none';
-    }
-    showContainer();
-  }).catch(()=> {
-    // si no puede reproducir, mostramos fallback (video visible) y overlay se mantiene si necesario
-    activateFallback('No se pudo iniciar reproducción automáticamente.');
+  // update container size on window resize to keep it within screen
+  window.addEventListener('resize', () => {
+    // if video metadata exists, re-adjust
+    if (fgVideo.videoWidth && fgVideo.videoHeight) adjustContainerToVideo(fgVideo);
   });
-});
 
-/* Si el usuario abre por file:// queremos mostrar controles interactivos:
-   Actualizar valores visuales cuando cambian */
-[thresholdEl, diffEl, softEl].forEach(el => el.addEventListener('input', () => {
-  thVal.textContent = parseFloat(thresholdEl.value).toFixed(2);
-  diffVal.textContent = diffEl.value;
-  softVal.textContent = softEl.value;
-}));
+  // click to hide container
+  fgContainer.addEventListener('click', (e) => {
+    if (fgContainer.style.display === 'none') return;
+    hideContainerWithAnimation();
+  });
+
+  // play button handler
+  playBtn.addEventListener('click', () => {
+    playOverlay.style.display = 'none';
+    bgVideo.play().catch(()=>{});
+    fgVideo.play().then(()=> {
+      if (usingChroma) {
+        fgCanvas.style.display = 'block';
+        fgVideo.style.display = 'none';
+        if (!animationId) animationId = requestAnimationFrame(()=>processLoop(fgVideo));
+      } else {
+        fgVideo.style.display = 'block';
+        fgCanvas.style.display = 'none';
+      }
+      showContainer();
+    }).catch(()=> {
+      activateFallback('No se pudo iniciar reproducción automáticamente.');
+    });
+  });
+
+  // controls update display values
+  [thresholdEl, diffEl, softEl].forEach(el => el.addEventListener('input', () => {
+    thVal.textContent = parseFloat(thresholdEl.value).toFixed(2);
+    diffVal.textContent = diffEl.value;
+    softVal.textContent = softEl.value;
+  }));
+}
 
 /* Start */
 init();
