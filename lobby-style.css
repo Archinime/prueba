@@ -1,10 +1,10 @@
-/* --- VARIABLES CYBERPUNK Y ANIME --- */
+/* --- VARIABLES CYBERPUNK --- */
 :root {
     --neon-cyan: #00f3ff;
     --neon-purple: #bc13fe;
     --neon-pink: #ff0055;
     --dark-bg: #050505;
-    --glass-bg: rgba(10, 12, 16, 0.85);
+    [cite_start]--glass-bg: rgba(10, 12, 16, 0.85); [cite: 52, 53]
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
@@ -14,57 +14,41 @@ body {
     color: white;
     overflow: hidden;
     height: 100vh;
-    width: 100vw;
+    [cite_start]width: 100vw; [cite: 54, 55]
 }
 
-/* --- VIDEO DE FONDO CLIMÁTICO --- */
 #weather-video {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
     object-fit: cover;
-    z-index: 0;
+    [cite_start]z-index: 0; [cite: 56]
 }
 
-/* --- CANVAS DE THREE.JS --- */
-#canvas-container {
+/* Contenedor Three.js */
+#three-container {
     position: fixed;
-    top: 0;
-    left: 0;
+    top: 0; left: 0;
     width: 100vw;
     height: 100vh;
     z-index: 1;
-    pointer-events: auto; /* para capturar clics */
 }
 
-/* --- CAPA INTERACTIVA (UI) --- */
 #room-container {
     position: relative;
-    width: 100%;
-    height: 100%;
+    width: 100%; height: 100%;
     display: flex;
     flex-direction: column;
     z-index: 10;
-    pointer-events: none;
+    [cite_start]pointer-events: none; [cite: 61, 62]
 }
 
-/* --- CAJA DE DIÁLOGO --- */
-#character-layer {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: center;
-    z-index: 5;
-    position: relative;
-    padding-bottom: 5vh;
-}
-
+/* --- DIÁLOGOS --- */
 #dialogue-box {
     position: absolute;
     bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
     width: 60%;
     background: rgba(10, 12, 16, 0.95);
     border: 2px solid var(--neon-cyan);
@@ -72,45 +56,23 @@ body {
     padding: 20px;
     box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
     z-index: 30;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    animation: pulse-glow 3s infinite alternate;
     pointer-events: auto;
+    [cite_start]animation: pulse-glow 3s infinite alternate; [cite: 66, 67, 68]
 }
 
 @keyframes pulse-glow {
     0% { box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); }
-    100% { box-shadow: 0 0 25px rgba(0, 243, 255, 0.6); }
+    100% { box-shadow: 0 0 25px rgba(0, 243, 255, 0.6); [cite_start]} [cite: 69, 70]
 }
 
-#dialogue-box.hidden {
-    opacity: 0;
-    transform: translateY(20px);
-    pointer-events: none;
-}
+#dialogue-box.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, 20px); }
 
 .char-name {
     color: var(--neon-pink);
     font-family: 'Orbitron', sans-serif;
-    font-size: 1.2rem;
-    margin-bottom: 5px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    [cite_start]letter-spacing: 2px; [cite: 71]
 }
 
-#dialogue-text {
-    font-size: 1.1rem;
-    line-height: 1.5;
-}
-
-/* --- ADAPTACIÓN PARA MÓVILES --- */
 @media (max-width: 768px) {
-    #dialogue-box {
-        width: 90%;
-        bottom: 50px;
-        padding: 15px;
-    }
-    
-    #dialogue-text {
-        font-size: 0.95rem;
-    }
+    #dialogue-box { width: 90%; bottom: 40px; [cite_start]} [cite: 74]
 }
