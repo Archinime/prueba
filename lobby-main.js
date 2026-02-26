@@ -46,7 +46,7 @@ roomModel.addEventListener('click', () => {
 function getDistances() {
     const isMobile = window.innerWidth <= 768;
     const roomDistance = isMobile ? '2.2m' : '2.8m';
-    const waifuDistance = isMobile ? '5.0m' : '5.5m'; // Suficiente espacio para ver todo el cuerpo
+    const waifuDistance = isMobile ? '4.0m' : '4.5m';
     return { roomDistance, waifuDistance, isMobile };
 }
 
@@ -68,8 +68,7 @@ function updateCameraSettings() {
     });
 
     if (!isWiggling && !isTouching) {
-        // Ángulo vertical más bajo (60°) para mejor visión de la cara y cuerpo completo
-        waifuModel.cameraOrbit = `${currentTheta}deg 60deg ${waifuDistance}`;
+        waifuModel.cameraOrbit = `${currentTheta}deg 65deg ${waifuDistance}`;
     }
 }
 
@@ -89,11 +88,11 @@ function startCustomWiggle() {
         if (elapsed < duration) {
             const progress = elapsed / duration;
             currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
-            applyOrbitToAll(currentTheta, 70, 60, roomDistance, waifuDistance);
+            applyOrbitToAll(currentTheta, 70, 65, roomDistance, waifuDistance);
             wiggleReq = requestAnimationFrame(step);
         } else {
             currentTheta = 0;
-            applyOrbitToAll(0, 70, 60, roomDistance, waifuDistance);
+            applyOrbitToAll(0, 70, 65, roomDistance, waifuDistance);
             isWiggling = false;
         }
     }
@@ -165,7 +164,7 @@ function startTouchAnimation() {
         } else {
             currentTheta += diff * 0.1;
         }
-        applyOrbitToAll(currentTheta, 70, 60, roomDistance, waifuDistance);
+        applyOrbitToAll(currentTheta, 70, 65, roomDistance, waifuDistance);
         if (Math.abs(currentTheta - targetTheta) > 0.01) {
             touchAnimReq = requestAnimationFrame(animStep);
         } else {
@@ -185,7 +184,7 @@ roomModel.addEventListener('camera-change', () => {
 
     cortinasModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
     pisoModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
-    waifuModel.cameraOrbit = `${roomOrbit.theta}rad 60deg ${waifuDistance}`;
+    waifuModel.cameraOrbit = `${roomOrbit.theta}rad 65deg ${waifuDistance}`;
 });
 
 window.addEventListener('resize', () => {
