@@ -1,10 +1,10 @@
-/* --- VARIABLES CYBERPUNK --- */
+/* --- VARIABLES CYBERPUNK Y ANIME --- */
 :root {
     --neon-cyan: #00f3ff;
     --neon-purple: #bc13fe;
     --neon-pink: #ff0055;
     --dark-bg: #050505;
-    [cite_start]--glass-bg: rgba(10, 12, 16, 0.85); [cite: 52, 53]
+    --glass-bg: rgba(10, 12, 16, 0.85);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
@@ -14,41 +14,82 @@ body {
     color: white;
     overflow: hidden;
     height: 100vh;
-    [cite_start]width: 100vw; [cite: 54, 55]
+    width: 100vw;
 }
 
+/* --- VIDEO DE FONDO CLIMÁTICO --- */
 #weather-video {
     position: fixed;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     object-fit: cover;
-    [cite_start]z-index: 0; [cite: 56]
+    z-index: 0; /* Al fondo del todo */
 }
 
-/* Contenedor Three.js */
-#three-container {
+/* --- LA HABITACIÓN (Fondo 3D Unificado) --- */
+#room-background {
     position: fixed;
     top: 0; left: 0;
     width: 100vw;
     height: 100vh;
+    background: transparent; /* Transparente para ver el video del clima */
     z-index: 1;
 }
 
+.bg-model {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    outline: none;
+    background-color: transparent;
+}
+
+#room-model {
+    z-index: 2;
+    pointer-events: auto;
+}
+
+/* --- CAPA INTERACTIVA (UI y Personaje) --- */
 #room-container {
     position: relative;
     width: 100%; height: 100%;
     display: flex;
     flex-direction: column;
     z-index: 10;
-    [cite_start]pointer-events: none; [cite: 61, 62]
+    pointer-events: none;
 }
 
-/* --- DIÁLOGOS --- */
+/* --- PERSONAJE --- */
+#character-layer {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    z-index: 5;
+    position: relative;
+    padding-bottom: 5vh;
+}
+
+#waifu-placeholder {
+    width: 100%;
+    max-width: 450px;
+    height: 70vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    outline: none;
+    transition: all 0.3s;
+    /* pointer-events en none permite que el arrastre de cámara pase directo a la habitación */
+    pointer-events: none;
+}
+
+/* --- CAJA DE DIÁLOGO --- */
 #dialogue-box {
     position: absolute;
     bottom: 50px;
-    left: 50%;
-    transform: translateX(-50%);
     width: 60%;
     background: rgba(10, 12, 16, 0.95);
     border: 2px solid var(--neon-cyan);
@@ -56,23 +97,50 @@ body {
     padding: 20px;
     box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
     z-index: 30;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    animation: pulse-glow 3s infinite alternate;
     pointer-events: auto;
-    [cite_start]animation: pulse-glow 3s infinite alternate; [cite: 66, 67, 68]
 }
 
 @keyframes pulse-glow {
     0% { box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); }
-    100% { box-shadow: 0 0 25px rgba(0, 243, 255, 0.6); [cite_start]} [cite: 69, 70]
+    100% { box-shadow: 0 0 25px rgba(0, 243, 255, 0.6); }
 }
 
-#dialogue-box.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, 20px); }
+#dialogue-box.hidden {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+}
 
 .char-name {
     color: var(--neon-pink);
     font-family: 'Orbitron', sans-serif;
-    [cite_start]letter-spacing: 2px; [cite: 71]
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
 }
 
+#dialogue-text {
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+/* --- ADAPTACIÓN PARA MÓVILES --- */
 @media (max-width: 768px) {
-    #dialogue-box { width: 90%; bottom: 40px; [cite_start]} [cite: 74]
+    #waifu-placeholder {
+        height: 60vh;
+        max-width: 100%;
+    }
+    
+    #dialogue-box {
+        width: 90%;
+        bottom: 50px; 
+        padding: 15px;
+    }
+    
+    #dialogue-text {
+        font-size: 0.95rem;
+    }
 }

@@ -1,165 +1,184 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
-// --- CONFIGURACIÓN ESCENA ---
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-document.getElementById('three-container').appendChild(renderer.domElement);
-
-// --- LUCES ---
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-scene.add(ambientLight);
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(5, 10, 7.5);
-scene.add(directionalLight);
-
-// --- CARGA DE MODELOS (OPCIÓN B) ---
-const loader = new GLTFLoader();
-const models = {};
-
-function loadModel(path, name) {
-    loader.load(path, (gltf) => {
-        models[name] = gltf.scene;
-        scene.add(gltf.scene);
-        
-        // Si es el personaje, activar animaciones si las tiene
-        if(name === 'lunari' && gltf.animations.length) {
-            const mixer = new THREE.AnimationMixer(gltf.scene);
-            const action = mixer.clipAction(gltf.animations[0]);
-            action.play();
-            models.mixer = mixer;
-        }
-    });
-}
-
-// Carga de tus archivos separados
-loadModel('piso.glb', 'piso');
-loadModel('paredes.glb', 'paredes');
-loadModel('cama.glb', 'cama');
-loadModel('lunari_saluda.glb', 'lunari');
-
-// --- CÁMARA E INTERACCIÓN ---
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.enableZoom = false;
-controls.enablePan = false;
-
-[cite_start]// Configuración inicial de cámara [cite: 14, 15]
-camera.position.set(0, 1.5, 3.5); 
-controls.target.set(0, 1, 0);
-
-function updateCameraSettings() {
-    const isMobile = window.innerWidth <= 768;
-    const distance = isMobile ? 4.5 : 3.5;
-    camera.position.z = distance;
-    
-    [cite_start]// Bloqueo de rotación en PC [cite: 17, 18]
-    if (!isMobile) {
-        controls.minAzimuthAngle = 0;
-        controls.maxAzimuthAngle = 0;
-    } else {
-        controls.minAzimuthAngle = -Math.PI / 6;
-        controls.maxAzimuthAngle = Math.PI / 6;
-    }
-}
-
-[cite_start]// --- SISTEMA DE DIÁLOGOS --- [cite: 8, 9, 10]
+// 1. Sistema de Diálogos
 let dialogueTimeout;
+
 function showDialogue(text) {
     const box = document.getElementById('dialogue-box');
     const textElement = document.getElementById('dialogue-text');
-    textElement.innerHTML = text;
+    textElement.innerHTML = text; 
     box.classList.remove('hidden');
+
     clearTimeout(dialogueTimeout);
-    dialogueTimeout = setTimeout(() => box.classList.add('hidden'), 5000);
+    dialogueTimeout = setTimeout(() => {
+        box.classList.add('hidden');
+    }, 5000);
 }
 
-[cite_start]// Raycaster para clics en 3D [cite: 10]
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-window.addEventListener('click', (event) => {
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    raycaster.setFromCamera(mouse, camera);
+// 2. Interacción al hacer clic en la pantalla (Habitación)
+document.getElementById('room-model').addEventListener('click', () => {
+    const frases = [
+        "¡Oye, me haces cosquillas!",
+        "¿Tienes algo bueno que ver hoy?",
+        "Jeje, gracias por la visita.",
+        "Deberíamos ver un episodio más... solo uno más."
+    ];
     
-    const intersects = raycaster.intersectObjects(scene.children, true);
-    if (intersects.length > 0) {
-        const frases = [
-            "¡Oye, me haces cosquillas!",
-            "¿Tienes algo bueno que ver hoy?",
-            "Jeje, gracias por la visita.",
-            "Deberíamos ver un episodio más... solo uno más."
-        ];
-        showDialogue(frases[Math.floor(Math.random() * frases.length)]);
-    }
+    const fraseRandom = frases[Math.floor(Math.random() * frases.length)];
+    showDialogue(fraseRandom);
 });
 
-[cite_start]// --- SISTEMA CLIMÁTICO (Copiado íntegramente de tu código) --- [cite: 30-50]
+// --- VARIABLES Y REFERENCIAS ---
+const roomModel = document.getElementById('room-model');
+const waifuModel = document.getElementById('waifu-placeholder');
+let wiggleReq;
+let isWiggling = false;
+
+// --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
+function updateCameraSettings() {
+    const isMobile = window.innerWidth <= 768;
+    // En PC a 3.5m, en móviles Hacemos ZOOM IN a la habitación (2.2m) para cortar los bordes delanteros
+    const roomDistance = isMobile ? '2.2m' : '3.5m';
+    
+    // Mantenemos a la chica en buena proporción respecto al zoom
+    const waifuDistance = isMobile ? '3.5m' : '3.5m'; 
+
+    if (isMobile) {
+        roomModel.minCameraOrbit = `-35deg 70deg ${roomDistance}`;
+        roomModel.maxCameraOrbit = `35deg 70deg ${roomDistance}`;
+        if(!isWiggling) roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
+    } else {
+        // En PC bloqueamos completamente la rotación limitando el giro a 0deg
+        roomModel.minCameraOrbit = `0deg 70deg ${roomDistance}`;
+        roomModel.maxCameraOrbit = `0deg 70deg ${roomDistance}`;
+        roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
+    }
+    
+    if(!isWiggling) waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
+}
+
+// --- ANIMACIÓN DE INDICACIÓN (10 SEGUNDOS) ---
+function startCustomWiggle() {
+    if (window.innerWidth > 768) return;
+    const duration = 10000; 
+    const startTime = performance.now();
+    const maxAngle = 28; 
+    
+    const roomDistance = '2.2m'; // Distancia con zoom móvil
+    const waifuDistance = '3.5m'; 
+    
+    isWiggling = true;
+    function step(currentTime) {
+        if (!isWiggling) return; 
+        
+        const elapsed = currentTime - startTime;
+        if (elapsed < duration) {
+            const progress = elapsed / duration;
+            const currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
+            roomModel.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
+            waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`;
+            wiggleReq = requestAnimationFrame(step);
+        } else {
+            roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
+            waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
+            isWiggling = false;
+        }
+    }
+    
+    wiggleReq = requestAnimationFrame(step);
+}
+
+roomModel.addEventListener('pointerdown', () => {
+    isWiggling = false;
+    cancelAnimationFrame(wiggleReq);
+});
+
+window.addEventListener('resize', updateCameraSettings);
+
+// 3. Sincronización de Cámaras (Efecto de Inmersión manual del usuario)
+roomModel.addEventListener('camera-change', () => {
+    if (isWiggling) return; 
+    
+    const roomOrbit = roomModel.getCameraOrbit();
+    const isMobile = window.innerWidth <= 768;
+    const waifuDistance = isMobile ? '3.5m' : '3.5m'; 
+    
+    waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${waifuDistance}`;
+});
+
+// 5. SISTEMA CLIMÁTICO DINÁMICO (Mejorado con respaldo IP)
 function initDynamicWeather() {
     const videoElement = document.getElementById('weather-video');
+
+    // Asigna el video dependiendo de TODOS los códigos WMO de Open-Meteo
     function setWeatherVideo(wmoCode) {
-        let videoFile = 'soleado.mp4';
-        if (wmoCode >= 1 && wmoCode <= 3) videoFile = 'nublado.mp4';
-        else if (wmoCode === 45 || wmoCode === 48) videoFile = 'neblina.mp4';
-        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) videoFile = 'lluvioso.mp4';
-        else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) videoFile = 'nevado.mp4';
-        else if (wmoCode >= 95 && wmoCode <= 99) videoFile = 'tormenta.mp4';
+        let videoFile = 'soleado.mp4'; // Por defecto
         
-        if (!videoElement.src.endsWith(videoFile)) videoElement.src = videoFile;
+        if (wmoCode === 0) { videoFile = 'soleado.mp4'; } // Despejado
+        else if (wmoCode >= 1 && wmoCode <= 3) { videoFile = 'nublado.mp4'; } // Mayormente despejado a nublado
+        else if (wmoCode === 45 || wmoCode === 48) { videoFile = 'neblina.mp4'; } // Niebla y niebla escarchada
+        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) { videoFile = 'lluvioso.mp4'; } // Llovizna y Lluvia
+        else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) { videoFile = 'nevado.mp4'; } // Nieve y granizo
+        else if (wmoCode >= 95 && wmoCode <= 99) { videoFile = 'tormenta.mp4'; } // Tormentas
+        
+        // Evitar que el video se reinicie si ya tiene el source correcto asignado
+        if (!videoElement.src.endsWith(videoFile)) {
+            videoElement.src = videoFile;
+        }
     }
 
+    // APLICAMOS CLIMA POR DEFECTO INMEDIATAMENTE
+    setWeatherVideo(0);
+
+    // Función genérica para consultar Open-Meteo con coordenadas
     async function fetchWeatherByCoords(lat, lon) {
         try {
             const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
             const data = await response.json();
             setWeatherVideo(data.current_weather.weathercode);
-        } catch (e) { console.error("Error clima", e); }
+        } catch (error) {
+            console.error("Error API Clima, manteniendo el clima por defecto.", error);
+        }
     }
 
+    // Función de respaldo: Obtiene coordenadas por la IP pública del usuario
     async function fetchWeatherByIP() {
         try {
-            const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
-            const data = await res.json();
-            await fetchWeatherByCoords(data.latitude, data.longitude);
-        } catch (e) { console.error("Error IP", e); }
+            console.log("Intentando obtener ubicación por IP...");
+            // Usamos geojs.io que es gratuita y no requiere API Key
+            const ipResponse = await fetch('https://get.geojs.io/v1/ip/geo.json');
+            const ipData = await ipResponse.json();
+            // Pasamos las coordenadas de la IP a nuestra función del clima
+            await fetchWeatherByCoords(ipData.latitude, ipData.longitude);
+        } catch (error) {
+            console.error("Error al obtener ubicación por IP, se mantendrá el clima predeterminado.", error);
+        }
     }
 
+    // Lógica de permisos de ubicación
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            p => fetchWeatherByCoords(p.coords.latitude, p.coords.longitude),
-            () => fetchWeatherByIP()
+            (position) => {
+                // Si el usuario acepta, usamos su GPS (más preciso)
+                fetchWeatherByCoords(position.coords.latitude, position.coords.longitude);
+            },
+            (error) => {
+                // Si el usuario rechaza o hay error, usamos la IP (Plan B)
+                console.warn("Geolocalización bloqueada/error. Usando respaldo por IP.", error);
+                fetchWeatherByIP();
+            }
         );
-    } else { fetchWeatherByIP(); }
+    } else {
+        // Si el navegador de plano no soporta geolocalización
+        fetchWeatherByIP();
+    }
 }
 
-// --- BUCLE DE ANIMACIÓN ---
-const clock = new THREE.Clock();
-function animate() {
-    requestAnimationFrame(animate);
-    const delta = clock.getDelta();
-    
-    if (models.mixer) models.mixer.update(delta);
-    
-    controls.update();
-    renderer.render(scene, camera);
-}
-
-// --- INICIALIZACIÓN ---
+// 4. Inicialización al cargar la página
 window.onload = () => {
-    updateCameraSettings();
-    initDynamicWeather();
-    animate();
-    [cite_start]setTimeout(() => showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí."), 1500); [cite: 50, 51]
+    updateCameraSettings(); 
+    startCustomWiggle(); 
+    initDynamicWeather(); // Llama a la API de clima y su respaldo
+    
+    setTimeout(() => {
+        showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");
+    }, 1500);
 };
-
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    updateCameraSettings();
-});
