@@ -13,7 +13,7 @@ function showDialogue(text) {
     }, 5000);
 }
 
-// --- REFERENCIAS A LOS MODELOS DE LA HABITACIÓN ---
+// --- REFERENCIAS A LOS MODELOS ---
 const roomModel = document.getElementById('room-model');       // principal (paredes)
 const cortinasModel = document.getElementById('cortinas-model');
 const pisoModel = document.getElementById('piso-model');
@@ -40,24 +40,27 @@ roomModel.addEventListener('click', () => {
 // --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
 function updateCameraSettings() {
     const isMobile = window.innerWidth <= 768;
-    const roomDistance = isMobile ? '2.2m' : '3.5m';
-    const waifuDistance = '3.5m';
+    // Distancia unificada: en móvil 3.0m (sin bordes), en PC 3.5m
+    const distance = isMobile ? '3.0m' : '3.5m';
+    const waifuDistance = distance; // Misma distancia para la chica
 
     // Aplicar a todos los modelos de fondo
     backgroundModels.forEach(model => {
         if (isMobile) {
-            model.minCameraOrbit = `-35deg 70deg ${roomDistance}`;
-            model.maxCameraOrbit = `35deg 70deg ${roomDistance}`;
-            if (!isWiggling) model.cameraOrbit = `0deg 70deg ${roomDistance}`;
+            model.minCameraOrbit = `-35deg 70deg ${distance}`;
+            model.maxCameraOrbit = `35deg 70deg ${distance}`;
+            if (!isWiggling) model.cameraOrbit = `0deg 70deg ${distance}`;
         } else {
-            // En PC bloqueamos la rotación
-            model.minCameraOrbit = `0deg 70deg ${roomDistance}`;
-            model.maxCameraOrbit = `0deg 70deg ${roomDistance}`;
-            model.cameraOrbit = `0deg 70deg ${roomDistance}`;
+            // En PC bloqueamos la rotación (solo 0deg)
+            model.minCameraOrbit = `0deg 70deg ${distance}`;
+            model.maxCameraOrbit = `0deg 70deg ${distance}`;
+            model.cameraOrbit = `0deg 70deg ${distance}`;
         }
     });
 
-    if (!isWiggling) waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
+    if (!isWiggling) {
+        waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
+    }
 }
 
 // --- ANIMACIÓN DE INDICACIÓN (10 SEGUNDOS, solo en móvil) ---
@@ -66,8 +69,8 @@ function startCustomWiggle() {
     const duration = 10000;
     const startTime = performance.now();
     const maxAngle = 28;
-    const roomDistance = '2.2m';
-    const waifuDistance = '3.5m';
+    const distance = '3.0m'; // Usamos la distancia móvil
+    const waifuDistance = distance;
 
     isWiggling = true;
     function step(currentTime) {
@@ -79,13 +82,13 @@ function startCustomWiggle() {
             const currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
             // Aplicar a todos los modelos de fondo
             backgroundModels.forEach(model => {
-                model.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
+                model.cameraOrbit = `${currentTheta}deg 70deg ${distance}`;
             });
             waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`;
             wiggleReq = requestAnimationFrame(step);
         } else {
             backgroundModels.forEach(model => {
-                model.cameraOrbit = `0deg 70deg ${roomDistance}`;
+                model.cameraOrbit = `0deg 70deg ${distance}`;
             });
             waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
             isWiggling = false;
@@ -102,18 +105,18 @@ roomModel.addEventListener('pointerdown', () => {
 
 window.addEventListener('resize', updateCameraSettings);
 
-// 3. Sincronización de cámaras: cuando el modelo principal se mueve, los otros lo siguen
+// 3. Sincronización de cámaras: cuando el modelo principal se mueve, los otros lo siguen al instante
 roomModel.addEventListener('camera-change', () => {
     if (isWiggling) return;
 
     const roomOrbit = roomModel.getCameraOrbit();
     const isMobile = window.innerWidth <= 768;
-    const roomDistance = isMobile ? '2.2m' : '3.5m';
-    const waifuDistance = '3.5m';
+    const distance = isMobile ? '3.0m' : '3.5m';
+    const waifuDistance = distance;
 
-    // Sincronizar cortinas y piso
-    cortinasModel.cameraOrbit = `${roomOrbit.theta}rad auto ${roomDistance}`;
-    pisoModel.cameraOrbit = `${roomOrbit.theta}rad auto ${roomDistance}`;
+    // Sincronizar cortinas y piso (mismos ángulos y distancia)
+    cortinasModel.cameraOrbit = `${roomOrbit.theta}rad auto ${distance}`;
+    pisoModel.cameraOrbit = `${roomOrbit.theta}rad auto ${distance}`;
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${waifuDistance}`;
 });
 
