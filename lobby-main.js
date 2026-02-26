@@ -38,23 +38,28 @@ roomModel.addEventListener('click', () => {
 });
 
 // --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
-function updateCameraSettings() {
+function getDistances() {
     const isMobile = window.innerWidth <= 768;
-    // Distancia unificada: en móvil 3.0m (sin bordes), en PC 3.5m
-    const distance = isMobile ? '3.0m' : '3.5m';
-    const waifuDistance = distance; // Misma distancia para la chica
+    // Valores más cercanos para evitar ver bordes
+    const roomDistance = isMobile ? '2.2m' : '2.8m';
+    const waifuDistance = roomDistance; // Misma distancia para la chica
+    return { roomDistance, waifuDistance, isMobile };
+}
+
+function updateCameraSettings() {
+    const { roomDistance, waifuDistance, isMobile } = getDistances();
 
     // Aplicar a todos los modelos de fondo
     backgroundModels.forEach(model => {
         if (isMobile) {
-            model.minCameraOrbit = `-35deg 70deg ${distance}`;
-            model.maxCameraOrbit = `35deg 70deg ${distance}`;
-            if (!isWiggling) model.cameraOrbit = `0deg 70deg ${distance}`;
+            model.minCameraOrbit = `-35deg 70deg ${roomDistance}`;
+            model.maxCameraOrbit = `35deg 70deg ${roomDistance}`;
+            if (!isWiggling) model.cameraOrbit = `0deg 70deg ${roomDistance}`;
         } else {
             // En PC bloqueamos la rotación (solo 0deg)
-            model.minCameraOrbit = `0deg 70deg ${distance}`;
-            model.maxCameraOrbit = `0deg 70deg ${distance}`;
-            model.cameraOrbit = `0deg 70deg ${distance}`;
+            model.minCameraOrbit = `0deg 70deg ${roomDistance}`;
+            model.maxCameraOrbit = `0deg 70deg ${roomDistance}`;
+            model.cameraOrbit = `0deg 70deg ${roomDistance}`;
         }
     });
 
@@ -66,11 +71,10 @@ function updateCameraSettings() {
 // --- ANIMACIÓN DE INDICACIÓN (10 SEGUNDOS, solo en móvil) ---
 function startCustomWiggle() {
     if (window.innerWidth > 768) return;
+    const { roomDistance, waifuDistance } = getDistances();
     const duration = 10000;
     const startTime = performance.now();
     const maxAngle = 28;
-    const distance = '3.0m'; // Usamos la distancia móvil
-    const waifuDistance = distance;
 
     isWiggling = true;
     function step(currentTime) {
@@ -82,13 +86,13 @@ function startCustomWiggle() {
             const currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
             // Aplicar a todos los modelos de fondo
             backgroundModels.forEach(model => {
-                model.cameraOrbit = `${currentTheta}deg 70deg ${distance}`;
+                model.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
             });
             waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`;
             wiggleReq = requestAnimationFrame(step);
         } else {
             backgroundModels.forEach(model => {
-                model.cameraOrbit = `0deg 70deg ${distance}`;
+                model.cameraOrbit = `0deg 70deg ${roomDistance}`;
             });
             waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
             isWiggling = false;
@@ -110,14 +114,13 @@ roomModel.addEventListener('camera-change', () => {
     if (isWiggling) return;
 
     const roomOrbit = roomModel.getCameraOrbit();
-    const isMobile = window.innerWidth <= 768;
-    const distance = isMobile ? '3.0m' : '3.5m';
-    const waifuDistance = distance;
+    const { roomDistance, waifuDistance } = getDistances();
 
-    // Sincronizar cortinas y piso (mismos ángulos y distancia)
-    cortinasModel.cameraOrbit = `${roomOrbit.theta}rad auto ${distance}`;
-    pisoModel.cameraOrbit = `${roomOrbit.theta}rad auto ${distance}`;
-    waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${waifuDistance}`;
+    // Copiar la órbita completa (theta, phi) a los modelos secundarios
+    cortinasModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
+    pisoModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
+    // La waifu mantiene su propia elevación (75deg) pero sigue el giro horizontal
+    waifuModel.cameraOrbit = `${roomOrbit.theta}rad 75deg ${waifuDistance}`;
 });
 
 // 4. SISTEMA CLIMÁTICO DINÁMICO (sin cambios)

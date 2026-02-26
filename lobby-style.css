@@ -48,7 +48,11 @@ body {
 
 #room-model {
     z-index: 2;
-    pointer-events: auto;
+    pointer-events: auto; /* Solo el principal recibe clics */
+}
+
+.secondary-model {
+    pointer-events: none; /* Evita que los modelos secundarios capturen eventos táctiles */
 }
 
 /* --- CAPA INTERACTIVA (UI y Personaje) --- */
@@ -82,7 +86,6 @@ body {
     align-items: center;
     outline: none;
     transition: all 0.3s;
-    /* pointer-events en none permite que el arrastre de cámara pase directo a la habitación */
     pointer-events: none;
 }
 
