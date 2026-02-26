@@ -21,6 +21,11 @@ const waifuModel = document.getElementById('waifu-placeholder');
 
 let wiggleReq;
 let isWiggling = false;
+let touchAnimReq;
+let isTouching = false;
+let targetTheta = 0;
+let currentTheta = 0;
+const MAX_ANGLE = 28; // grados máximo de giro
 
 // Lista de todos los modelos de fondo para sincronizar
 const backgroundModels = [roomModel, cortinasModel, pisoModel];
@@ -40,9 +45,7 @@ roomModel.addEventListener('click', () => {
 // --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
 function getDistances() {
     const isMobile = window.innerWidth <= 768;
-    // Distancias para la habitación (más cercanas para no ver bordes)
     const roomDistance = isMobile ? '2.2m' : '2.8m';
-    // Distancia para el personaje (ligeramente mayor para que se vea más atrás)
     const waifuDistance = isMobile ? '2.7m' : '3.3m';
     return { roomDistance, waifuDistance, isMobile };
 }
@@ -53,9 +56,10 @@ function updateCameraSettings() {
     // Aplicar a todos los modelos de fondo
     backgroundModels.forEach(model => {
         if (isMobile) {
+            // En móvil permitimos el rango completo pero controlaremos el movimiento manualmente
             model.minCameraOrbit = `-35deg 70deg ${roomDistance}`;
             model.maxCameraOrbit = `35deg 70deg ${roomDistance}`;
-            if (!isWiggling) model.cameraOrbit = `0deg 70deg ${roomDistance}`;
+            if (!isWiggling && !isTouching) model.cameraOrbit = `0deg 70deg ${roomDistance}`;
         } else {
             // En PC bloqueamos la rotación (solo 0deg)
             model.minCameraOrbit = `0deg 70deg ${roomDistance}`;
@@ -64,18 +68,18 @@ function updateCameraSettings() {
         }
     });
 
-    if (!isWiggling) {
+    if (!isWiggling && !isTouching) {
         waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
     }
 }
 
-// --- ANIMACIÓN DE INDICACIÓN (10 SEGUNDOS, solo en móvil) ---
+// --- ANIMACIÓN DE INDICACIÓN AUTOMÁTICA (10 SEGUNDOS, solo en móvil) ---
 function startCustomWiggle() {
     if (window.innerWidth > 768) return;
     const { roomDistance, waifuDistance } = getDistances();
     const duration = 10000;
     const startTime = performance.now();
-    const maxAngle = 28;
+    const maxAngle = MAX_ANGLE;
 
     isWiggling = true;
     function step(currentTime) {
@@ -84,43 +88,128 @@ function startCustomWiggle() {
         const elapsed = currentTime - startTime;
         if (elapsed < duration) {
             const progress = elapsed / duration;
-            const currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
-            // Aplicar a todos los modelos de fondo
-            backgroundModels.forEach(model => {
-                model.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
-            });
-            waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`;
+            currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
+            applyOrbitToAll(currentTheta, 70, roomDistance, waifuDistance);
             wiggleReq = requestAnimationFrame(step);
         } else {
-            backgroundModels.forEach(model => {
-                model.cameraOrbit = `0deg 70deg ${roomDistance}`;
-            });
-            waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
+            currentTheta = 0;
+            applyOrbitToAll(0, 70, roomDistance, waifuDistance);
             isWiggling = false;
         }
     }
     wiggleReq = requestAnimationFrame(step);
 }
 
+// Función para aplicar la misma órbita a todos los modelos
+function applyOrbitToAll(thetaDeg, phiDeg, roomDist, waifuDist) {
+    backgroundModels.forEach(model => {
+        model.cameraOrbit = `${thetaDeg}deg ${phiDeg}deg ${roomDist}`;
+    });
+    waifuModel.cameraOrbit = `${thetaDeg}deg 75deg ${waifuDist}`;
+}
+
+// --- SISTEMA TÁCTIL PARA MÓVILES (reemplaza el arrastre libre) ---
+function initTouchControls() {
+    if (window.innerWidth > 768) {
+        // En PC, habilitamos camera-controls normal
+        roomModel.cameraControls = true;
+        return;
+    }
+
+    // En móvil, desactivamos camera-controls para evitar arrastre libre
+    roomModel.cameraControls = false;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    const sensitivity = 0.5; // sensibilidad del deslizamiento
+
+    roomModel.addEventListener('touchstart', (e) => {
+        if (isWiggling) {
+            // Cancelar wiggle automático si el usuario interactúa
+            isWiggling = false;
+            cancelAnimationFrame(wiggleReq);
+        }
+        if (isTouching) return;
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        isTouching = true;
+        // Detener cualquier animación táctil previa
+        if (touchAnimReq) cancelAnimationFrame(touchAnimReq);
+    });
+
+    roomModel.addEventListener('touchmove', (e) => {
+        e.preventDefault(); // Evita scroll
+        if (!isTouching) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - touchStartX;
+        // Mapear el deslizamiento a un ángulo objetivo (máximo ±MAX_ANGLE)
+        targetTheta = Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, deltaX * sensitivity));
+        // Animar hacia el objetivo
+        startTouchAnimation();
+    });
+
+    roomModel.addEventListener('touchend', () => {
+        if (!isTouching) return;
+        isTouching = false;
+        // Regresar suavemente a 0
+        targetTheta = 0;
+        startTouchAnimation();
+    });
+
+    roomModel.addEventListener('touchcancel', () => {
+        isTouching = false;
+        targetTheta = 0;
+        startTouchAnimation();
+    });
+}
+
+function startTouchAnimation() {
+    if (touchAnimReq) cancelAnimationFrame(touchAnimReq);
+    const { roomDistance, waifuDistance } = getDistances();
+    const animStep = () => {
+        // Interpolación lineal suave hacia el objetivo
+        const diff = targetTheta - currentTheta;
+        if (Math.abs(diff) < 0.1) {
+            currentTheta = targetTheta;
+        } else {
+            currentTheta += diff * 0.1; // velocidad de transición
+        }
+        applyOrbitToAll(currentTheta, 70, roomDistance, waifuDistance);
+        if (Math.abs(currentTheta - targetTheta) > 0.01) {
+            touchAnimReq = requestAnimationFrame(animStep);
+        } else {
+            touchAnimReq = null;
+        }
+    };
+    touchAnimReq = requestAnimationFrame(animStep);
+}
+
 // Detener wiggle si el usuario interactúa
 roomModel.addEventListener('pointerdown', () => {
+    if (window.innerWidth > 768) return; // solo en móvil manejamos el touch aparte
     isWiggling = false;
     cancelAnimationFrame(wiggleReq);
 });
 
-window.addEventListener('resize', updateCameraSettings);
+window.addEventListener('resize', () => {
+    updateCameraSettings();
+    // Reiniciar wiggle solo si no está tocando
+    if (!isTouching && !isWiggling && window.innerWidth <= 768) {
+        startCustomWiggle();
+    }
+});
 
-// 3. Sincronización de cámaras: copia exacta de la órbita a los secundarios
+// 3. Sincronización de cámaras (solo para PC, en móvil la manejamos manual)
 roomModel.addEventListener('camera-change', () => {
+    if (window.innerWidth <= 768) return; // en móvil no usamos este evento
     if (isWiggling) return;
 
     const roomOrbit = roomModel.getCameraOrbit();
     const { roomDistance, waifuDistance } = getDistances();
 
-    // Sincronizar cortinas y piso con los mismos ángulos y distancia de habitación
     cortinasModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
     pisoModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
-    // El personaje sigue el ángulo horizontal pero mantiene su elevación y distancia propia
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad 75deg ${waifuDistance}`;
 });
 
@@ -181,7 +270,10 @@ function initDynamicWeather() {
 // 5. Inicialización
 window.onload = () => {
     updateCameraSettings();
-    startCustomWiggle();
+    initTouchControls(); // Inicializar controles táctiles para móvil
+    if (window.innerWidth <= 768) {
+        startCustomWiggle(); // Wiggle automático solo en móvil
+    }
     initDynamicWeather();
 
     setTimeout(() => {
