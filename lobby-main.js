@@ -36,11 +36,11 @@ let isWiggling = false;
 function updateCameraSettings() {
     const isMobile = window.innerWidth <= 768;
     
-    // IMPORTANTE: La habitación se mantiene siempre en 3.5m para NO ver los límites/bordes
-    const roomDistance = '3.5m';
+    // En PC a 3.5m, en móviles Hacemos ZOOM IN a la habitación (2.2m) para cortar los bordes delanteros
+    const roomDistance = isMobile ? '2.2m' : '3.5m';
     
-    // Alejamos SOLO a la chica en móviles (ahora a 5.8m) para que retroceda más en la pantalla
-    const waifuDistance = isMobile ? '5.8m' : '3.5m'; 
+    // Mantenemos a la chica en buena proporción respecto al zoom
+    const waifuDistance = isMobile ? '3.5m' : '3.5m'; 
 
     if (isMobile) {
         roomModel.minCameraOrbit = `-35deg 70deg ${roomDistance}`;
@@ -53,37 +53,34 @@ function updateCameraSettings() {
         roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
     }
     
-    // Ajustar a la waifu empujándola hacia atrás
     if(!isWiggling) waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
 }
 
 // --- ANIMACIÓN DE INDICACIÓN (10 SEGUNDOS) ---
 function startCustomWiggle() {
-    if (window.innerWidth > 768) return; // Solo ejecutar la animación en móviles
+    if (window.innerWidth > 768) return; 
     
-    const duration = 10000; // 10 segundos exactos
+    const duration = 10000; 
     const startTime = performance.now();
     const maxAngle = 28; 
     
-    const roomDistance = '3.5m';
-    const waifuDistance = '5.8m'; // Actualizado también aquí
+    const roomDistance = '2.2m'; // Distancia con zoom móvil
+    const waifuDistance = '3.5m'; 
     
     isWiggling = true;
 
     function step(currentTime) {
-        if (!isWiggling) return; // Se detiene si el usuario toca la pantalla
+        if (!isWiggling) return; 
         
         const elapsed = currentTime - startTime;
         if (elapsed < duration) {
             const progress = elapsed / duration;
-            // Movimiento fluido de onda
             const currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
             roomModel.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
             waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`; 
             
             wiggleReq = requestAnimationFrame(step);
         } else {
-            // Regresa al centro exacto al terminar
             roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
             waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
             isWiggling = false;
@@ -93,33 +90,72 @@ function startCustomWiggle() {
     wiggleReq = requestAnimationFrame(step);
 }
 
-// Detener la animación si el usuario decide mover la pantalla por sí mismo
 roomModel.addEventListener('pointerdown', () => {
     isWiggling = false;
     cancelAnimationFrame(wiggleReq);
 });
 
-// Reajustar todo si se gira el celular o se cambia el tamaño de la ventana
 window.addEventListener('resize', updateCameraSettings);
 
 // 3. Sincronización de Cámaras (Efecto de Inmersión manual del usuario)
 roomModel.addEventListener('camera-change', () => {
-    if (isWiggling) return; // No interferir mientras la animación de 10s está activa
+    if (isWiggling) return; 
     
     const roomOrbit = roomModel.getCameraOrbit();
     const isMobile = window.innerWidth <= 768;
-    const waifuDistance = isMobile ? '5.8m' : '3.5m'; // Actualizado también aquí
+    const waifuDistance = isMobile ? '3.5m' : '3.5m'; 
     
-    // Aplicamos el giro a la waifu conservando su propia distancia para no acercarla de golpe
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${waifuDistance}`;
 });
 
-// 4. Inicialización y saludo al cargar la página
-window.onload = () => {
-    updateCameraSettings(); // Aplicar el bloqueo en PC y distancias
-    startCustomWiggle(); // Iniciar la animación suave en móviles
+// 5. SISTEMA CLIMÁTICO DINÁMICO (Invisible UI)
+function initDynamicWeather() {
+    const videoElement = document.getElementById('weather-video');
     
-    // Mostrar saludo inicial después de 1.5 segundos
+    // Asigna el video dependiendo del código WMO de Open-Meteo
+    function setWeatherVideo(wmoCode) {
+        let videoFile = 'soleado.mp4'; // Por defecto
+        
+        if (wmoCode === 0) videoFile = 'soleado.mp4';
+        else if (wmoCode >= 1 && wmoCode <= 3) videoFile = 'nublado.mp4';
+        else if (wmoCode === 45 || wmoCode === 48) videoFile = 'neblina.mp4';
+        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) videoFile = 'lluvioso.mp4';
+        else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) videoFile = 'nevado.mp4';
+        else if (wmoCode >= 95 && wmoCode <= 99) videoFile = 'tormenta.mp4';
+        
+        videoElement.src = videoFile;
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                try {
+                    const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                    const data = await response.json();
+                    setWeatherVideo(data.current_weather.weathercode);
+                } catch (error) {
+                    console.error("Error API Clima, usando predeterminado.", error);
+                    setWeatherVideo(0); 
+                }
+            },
+            (error) => {
+                console.error("Geolocalización bloqueada/error, usando predeterminado.", error);
+                setWeatherVideo(0); 
+            }
+        );
+    } else {
+        setWeatherVideo(0); 
+    }
+}
+
+// 4. Inicialización al cargar la página
+window.onload = () => {
+    updateCameraSettings(); 
+    startCustomWiggle(); 
+    initDynamicWeather(); // Llama a la API de clima en segundo plano
+    
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");
     }, 1500);
