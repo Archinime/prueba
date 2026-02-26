@@ -35,7 +35,6 @@ let isWiggling = false;
 // --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
 function updateCameraSettings() {
     const isMobile = window.innerWidth <= 768;
-    
     // En PC a 3.5m, en móviles Hacemos ZOOM IN a la habitación (2.2m) para cortar los bordes delanteros
     const roomDistance = isMobile ? '2.2m' : '3.5m';
     
@@ -58,8 +57,7 @@ function updateCameraSettings() {
 
 // --- ANIMACIÓN DE INDICACIÓN (10 SEGUNDOS) ---
 function startCustomWiggle() {
-    if (window.innerWidth > 768) return; 
-    
+    if (window.innerWidth > 768) return;
     const duration = 10000; 
     const startTime = performance.now();
     const maxAngle = 28; 
@@ -68,7 +66,6 @@ function startCustomWiggle() {
     const waifuDistance = '3.5m'; 
     
     isWiggling = true;
-
     function step(currentTime) {
         if (!isWiggling) return; 
         
@@ -77,8 +74,7 @@ function startCustomWiggle() {
             const progress = elapsed / duration;
             const currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
             roomModel.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
-            waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`; 
-            
+            waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`;
             wiggleReq = requestAnimationFrame(step);
         } else {
             roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
@@ -108,23 +104,30 @@ roomModel.addEventListener('camera-change', () => {
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${waifuDistance}`;
 });
 
-// 5. SISTEMA CLIMÁTICO DINÁMICO (Invisible UI)
+// 5. SISTEMA CLIMÁTICO DINÁMICO (Mejorado para PC)
 function initDynamicWeather() {
     const videoElement = document.getElementById('weather-video');
-    
-    // Asigna el video dependiendo del código WMO de Open-Meteo
+
+    // Asigna el video dependiendo de TODOS los códigos WMO de Open-Meteo
     function setWeatherVideo(wmoCode) {
         let videoFile = 'soleado.mp4'; // Por defecto
         
-        if (wmoCode === 0) videoFile = 'soleado.mp4';
-        else if (wmoCode >= 1 && wmoCode <= 3) videoFile = 'nublado.mp4';
-        else if (wmoCode === 45 || wmoCode === 48) videoFile = 'neblina.mp4';
-        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) videoFile = 'lluvioso.mp4';
-        else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) videoFile = 'nevado.mp4';
-        else if (wmoCode >= 95 && wmoCode <= 99) videoFile = 'tormenta.mp4';
+        if (wmoCode === 0) { videoFile = 'soleado.mp4'; } // Despejado
+        else if (wmoCode >= 1 && wmoCode <= 3) { videoFile = 'nublado.mp4'; } // Mayormente despejado a nublado
+        else if (wmoCode === 45 || wmoCode === 48) { videoFile = 'neblina.mp4'; } // Niebla y niebla escarchada
+        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) { videoFile = 'lluvioso.mp4'; } // Llovizna y Lluvia (ligera, fuerte, chubascos)
+        else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) { videoFile = 'nevado.mp4'; } // Nieve y granizo
+        else if (wmoCode >= 95 && wmoCode <= 99) { videoFile = 'tormenta.mp4'; } // Tormentas con o sin granizo gruesa
         
-        videoElement.src = videoFile;
+        // Evitar que el video se reinicie si ya tiene el source correcto asignado
+        if (!videoElement.src.endsWith(videoFile)) {
+            videoElement.src = videoFile;
+        }
     }
+
+    // APLICAMOS CLIMA POR DEFECTO INMEDIATAMENTE: Esto evita la pantalla en negro en PC
+    // mientras el navegador pregunta por los permisos de ubicación o si los rechaza sin avisar.
+    setWeatherVideo(0);
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -136,17 +139,13 @@ function initDynamicWeather() {
                     const data = await response.json();
                     setWeatherVideo(data.current_weather.weathercode);
                 } catch (error) {
-                    console.error("Error API Clima, usando predeterminado.", error);
-                    setWeatherVideo(0); 
+                    console.error("Error API Clima, manteniendo el clima por defecto.", error);
                 }
             },
             (error) => {
-                console.error("Geolocalización bloqueada/error, usando predeterminado.", error);
-                setWeatherVideo(0); 
+                console.error("Geolocalización bloqueada/error, se mantendrá el clima predeterminado.", error);
             }
         );
-    } else {
-        setWeatherVideo(0); 
     }
 }
 
@@ -154,7 +153,7 @@ function initDynamicWeather() {
 window.onload = () => {
     updateCameraSettings(); 
     startCustomWiggle(); 
-    initDynamicWeather(); // Llama a la API de clima en segundo plano
+    initDynamicWeather(); // Llama a la API de clima y establece el video de fondo seguro
     
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");
