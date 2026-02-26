@@ -8,15 +8,13 @@ function showDialogue(text) {
     textElement.innerHTML = text; // Permite usar <br>
     box.classList.remove('hidden');
     
-    // Ocultar el diálogo después de 5 segundos
     clearTimeout(dialogueTimeout);
     dialogueTimeout = setTimeout(() => {
         box.classList.add('hidden');
     }, 5000);
 }
 
-// 2. Interacción al hacer clic en la pantalla (Habitación)
-// Como la waifu ya no intercepta los clics, usamos el fondo para interactuar
+// 2. Interacción al hacer clic en la pantalla
 document.getElementById('room-model').addEventListener('click', () => {
     const frases = [
         "¡Oye, me haces cosquillas!",
@@ -29,20 +27,64 @@ document.getElementById('room-model').addEventListener('click', () => {
     showDialogue(fraseRandom);
 });
 
-// 3. Sincronización de Cámaras (Efecto de Inmersión)
+// 3. Sistema dinámico de la cámara y dispositivo
 const roomModel = document.getElementById('room-model');
 const waifuModel = document.getElementById('waifu-placeholder');
 
+let isInteracting = false;
+let introAnimation;
+
+function setupCamera() {
+    const isMobile = window.innerWidth <= 768; // Detectar si es un móvil
+    const maxAngle = 50; // Se aumentó el rango de rotación (antes era 30)
+
+    if (isMobile) {
+        // MÓVILES: Activar controles y definir la animación de indicación
+        roomModel.setAttribute('camera-controls', 'true');
+        roomModel.minCameraOrbit = `-${maxAngle}deg 70deg 3.5m`;
+        roomModel.maxCameraOrbit = `${maxAngle}deg 70deg 3.5m`;
+
+        const cycleDuration = 10000; // 10 segundos de animación
+        const startTime = Date.now();
+
+        // Función que mueve la cámara de izquierda a derecha suavemente
+        function animateCamera() {
+            if (isInteracting) return; // Si el jugador toca la pantalla, se cancela
+
+            const elapsed = Date.now() - startTime;
+            // Ecuación seno para hacer el movimiento de "Péndulo"
+            const currentAngle = Math.sin((elapsed / cycleDuration) * Math.PI * 2) * maxAngle;
+            
+            roomModel.cameraOrbit = `${currentAngle}deg 70deg 3.5m`;
+            introAnimation = requestAnimationFrame(animateCamera);
+        }
+
+        // Iniciar la animación
+        animateCamera();
+
+        // Detener la animación cuando el jugador toque el modelo (para devolver el control)
+        roomModel.addEventListener('pointerdown', () => {
+            isInteracting = true;
+            cancelAnimationFrame(introAnimation);
+        }, { once: true });
+
+    } else {
+        // PC: Bloquear controles (no se mueve ni a la izquierda ni a la derecha)
+        roomModel.removeAttribute('camera-controls');
+        roomModel.cameraOrbit = `0deg 70deg 3.5m`;
+    }
+}
+
+// 4. Sincronización de Cámaras entre Habitación y Personaje
 roomModel.addEventListener('camera-change', () => {
-    // Obtenemos el giro de la habitación y se lo aplicamos al personaje
     const roomOrbit = roomModel.getCameraOrbit();
-    // Forzamos la distancia a 3.5m para que el personaje se mantenga atrás en todo momento
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto 3.5m`;
 });
 
-// 4. Saludo inicial al cargar la página
+// 5. Arranque inicial
 window.onload = () => {
-    // Mostrar saludo inicial después de 1.5 segundos para dar tiempo a que carguen los modelos
+    setupCamera(); // Aplica las reglas dependiendo de si es PC o Móvil
+
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");
     }, 1500);

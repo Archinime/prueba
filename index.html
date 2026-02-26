@@ -17,12 +17,12 @@
             class="bg-model" 
             src="pared_piso.glb" 
             shadow-intensity="1" 
-            camera-controls 
             disable-zoom 
+            disable-tap
+            disable-pan
+            interaction-prompt="none"
             camera-target="0m 1m 0m"
-            camera-orbit="0deg 70deg 3.5m" 
-            min-camera-orbit="-30deg 70deg 3.5m"
-            max-camera-orbit="30deg 70deg 3.5m"
+            camera-orbit="0deg 70deg 3.5m"
             field-of-view="60deg">
         </model-viewer>
     </div>
@@ -35,6 +35,8 @@
                 src="lunari_saluda.glb" 
                 autoplay 
                 disable-zoom
+                disable-tap
+                disable-pan
                 shadow-intensity="1"
                 camera-target="0m 0.8m 0m"
                 camera-orbit="0deg 75deg 3.5m">

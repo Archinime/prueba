@@ -63,14 +63,13 @@ body {
 
 #waifu-placeholder {
     width: 100%;
-    max-width: 450px; /* Reducido para que se vea un poco más lejos */
+    max-width: 450px; 
     height: 70vh; 
     display: flex;
     justify-content: center;
     align-items: center;
     outline: none;
     transition: all 0.3s;
-    /* pointer-events en none permite que el arrastre de cámara pase directo a la habitación */
     pointer-events: none; 
 }
 
