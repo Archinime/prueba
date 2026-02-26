@@ -61,6 +61,7 @@ function showDialogue(text) {
     
     textElement.innerText = text;
     box.classList.remove('hidden');
+    
     // Ocultar el diálogo después de 5 segundos
     clearTimeout(dialogueTimeout);
     dialogueTimeout = setTimeout(() => {
@@ -91,6 +92,7 @@ document.getElementById('waifu-placeholder').addEventListener('click', () => {
             ];
         
             const fraseRandom = frases[Math.floor(Math.random() * frases.length)];
+            
             // Recompensa aleatoria pequeña
             if (Math.random() > 0.85) {
                 playerState.coins += 10;
@@ -106,19 +108,6 @@ document.getElementById('waifu-placeholder').addEventListener('click', () => {
         showDialogue("Estoy muy cansada... dejemos de jugar y descansemos un poco. (Energía insuficiente)");
     }
 });
-
-// 7. NUEVO: SINCRONIZAR CÁMARA DE LA HABITACIÓN
-// Hace que las paredes giren al mismo tiempo que el piso
-const pisoModel = document.getElementById('piso-model');
-const paredesModel = document.getElementById('paredes-model');
-
-if (pisoModel && paredesModel) {
-    pisoModel.addEventListener('camera-change', () => {
-        paredesModel.cameraOrbit = pisoModel.cameraOrbit;
-        paredesModel.cameraTarget = pisoModel.cameraTarget;
-        paredesModel.fieldOfView = pisoModel.fieldOfView;
-    });
-}
 
 // Arrancar el sistema cuando carga la página
 window.onload = loadProgress;
