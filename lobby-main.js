@@ -46,7 +46,8 @@ roomModel.addEventListener('click', () => {
 function getDistances() {
     const isMobile = window.innerWidth <= 768;
     const roomDistance = isMobile ? '2.2m' : '2.8m';
-    const waifuDistance = isMobile ? '2.7m' : '3.3m';
+    // MODIFICADO: la distancia del personaje ahora es la misma en móvil que en PC (3.3m)
+    const waifuDistance = isMobile ? '3.3m' : '3.3m'; // Antes era '2.7m' en móvil
     return { roomDistance, waifuDistance, isMobile };
 }
 
