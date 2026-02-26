@@ -74,14 +74,16 @@
                 id="waifu-placeholder" 
                 src="lunari_saluda.glb" 
                 autoplay 
-                scale="0.9 0.9 0.9"
+                scale="0.8 0.8 0.8"  <!-- Valor por defecto, se ajustará por JS -->
+                position="0m 0.1m 0m"
                 disable-zoom
                 disable-tap
                 disable-pan
                 interaction-prompt="none"
                 shadow-intensity="1"
-                camera-target="0m 0.8m 0m"
-                camera-orbit="0deg 75deg 3.3m">
+                camera-target="0m 0.7m 0m"
+                camera-orbit="0deg 60deg 5.5m"  <!-- Valor por defecto -->
+                field-of-view="60deg">
             </model-viewer>
             
             <div id="dialogue-box" class="hidden">
