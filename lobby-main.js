@@ -17,6 +17,8 @@ function showDialogue(text) {
 const roomModel = document.getElementById('room-model');       // principal (paredes)
 const cortinasModel = document.getElementById('cortinas-model');
 const pisoModel = document.getElementById('piso-model');
+const alfombraModel = document.getElementById('alfombra-model');
+const camaModel = document.getElementById('cama-model');
 const waifuModel = document.getElementById('waifu-placeholder');
 
 let wiggleReq;
@@ -27,8 +29,8 @@ let targetTheta = 0;
 let currentTheta = 0;
 const MAX_ANGLE = 28; // grados máximo de giro
 
-// Lista de todos los modelos de fondo para sincronizar
-const backgroundModels = [roomModel, cortinasModel, pisoModel];
+// Lista de todos los modelos de fondo para sincronizar (ahora con alfombra y cama)
+const backgroundModels = [roomModel, cortinasModel, pisoModel, alfombraModel, camaModel];
 
 // 2. Interacción al hacer clic en la habitación (solo en el modelo principal)
 roomModel.addEventListener('click', () => {
@@ -48,10 +50,10 @@ function getSettings() {
     return {
         isMobile,
         roomDistance: isMobile ? '2.2m' : '2.8m',
-        waifuDistance: isMobile ? '6.0m' : '5.5m', // Móvil más lejos
-        waifuScale: isMobile ? 0.7 : 0.8,          // Móvil más pequeño
-        waifuTargetY: '0.7m',                       // Punto de mira constante
-        waifuPhi: 60                                 // Ángulo vertical
+        waifuDistance: isMobile ? '6.0m' : '5.5m',
+        waifuScale: isMobile ? 0.7 : 0.8,
+        waifuTargetY: '0.7m',
+        waifuPhi: 60
     };
 }
 
@@ -126,7 +128,7 @@ function initTouchControls() {
     roomModel.cameraControls = false;
 
     let touchStartX = 0;
-    const sensitivity = 0.5; // sensibilidad del deslizamiento
+    const sensitivity = 0.5;
 
     roomModel.addEventListener('touchstart', (e) => {
         if (isWiggling) {
@@ -152,7 +154,6 @@ function initTouchControls() {
     roomModel.addEventListener('touchend', () => {
         if (!isTouching) return;
         isTouching = false;
-        // No regresamos a 0
     });
 
     roomModel.addEventListener('touchcancel', () => {
@@ -180,16 +181,19 @@ function startTouchAnimation() {
     touchAnimReq = requestAnimationFrame(animStep);
 }
 
-// Sincronización para PC
+// Sincronización para PC (actualiza todos los modelos de fondo excepto el principal)
 roomModel.addEventListener('camera-change', () => {
-    if (window.innerWidth <= 768) return; // en móvil no usamos este evento
+    if (window.innerWidth <= 768) return;
     if (isWiggling) return;
 
     const roomOrbit = roomModel.getCameraOrbit();
     const settings = getSettings();
 
-    cortinasModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${settings.roomDistance}`;
-    pisoModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${settings.roomDistance}`;
+    backgroundModels.forEach(model => {
+        if (model !== roomModel) {
+            model.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${settings.roomDistance}`;
+        }
+    });
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad ${settings.waifuPhi}deg ${settings.waifuDistance}`;
 });
 
@@ -201,28 +205,12 @@ window.addEventListener('resize', () => {
 });
 
 // 4. SISTEMA CLIMÁTICO DINÁMICO CON MODELOS 3D
-let currentWeatherModel = null; // Para mantener referencia al modelo actual
+let currentWeatherModel = null;
 
 function setWeatherModel(wmoCode) {
     const container = document.getElementById('weather-model-container');
     
-    // Mapeo de códigos WMO a nombres de archivos .glb (ejemplos, el usuario los cambiará)
-    let modelFile = 'soleado.glb'; // por defecto
-    
-    // Códigos WMO según Open-Meteo:
-    // 0: Clear sky
-    // 1, 2, 3: Mainly clear, partly cloudy, overcast
-    // 45, 48: Fog and depositing rime fog
-    // 51, 53, 55: Drizzle
-    // 56, 57: Freezing Drizzle
-    // 61, 63, 65: Rain
-    // 66, 67: Freezing Rain
-    // 71, 73, 75: Snow fall
-    // 77: Snow grains
-    // 80, 81, 82: Rain showers
-    // 85, 86: Snow showers
-    // 95: Thunderstorm
-    // 96, 99: Thunderstorm with hail
+    let modelFile = 'soleado.glb';
     
     if (wmoCode === 0) {
         modelFile = 'soleado.glb';
@@ -242,16 +230,13 @@ function setWeatherModel(wmoCode) {
         modelFile = 'tormenta.glb';
     }
     
-    // Si ya hay un modelo cargado y es el mismo, no hacer nada
     if (currentWeatherModel && currentWeatherModel.src.endsWith(modelFile)) return;
     
-    // Eliminar el modelo anterior si existe
     if (currentWeatherModel) {
         currentWeatherModel.remove();
         currentWeatherModel = null;
     }
     
-    // Crear nuevo modelo-viewer para el clima
     const weatherModel = document.createElement('model-viewer');
     weatherModel.classList.add('weather-model');
     weatherModel.src = modelFile;
@@ -261,15 +246,14 @@ function setWeatherModel(wmoCode) {
     weatherModel.setAttribute('disable-tap', '');
     weatherModel.setAttribute('disable-pan', '');
     weatherModel.setAttribute('interaction-prompt', 'none');
-    weatherModel.setAttribute('camera-target', '0m 0m 0m'); // Ajusta según el modelo
-    weatherModel.setAttribute('camera-orbit', '0deg 0deg 0m'); // Los modelos ya tienen su propia posición
+    weatherModel.setAttribute('camera-target', '0m 0m 0m');
+    weatherModel.setAttribute('camera-orbit', '0deg 0deg 0m');
     weatherModel.setAttribute('field-of-view', '60deg');
     
     container.appendChild(weatherModel);
     currentWeatherModel = weatherModel;
 }
 
-// Función para obtener el clima
 async function fetchWeatherByCoords(lat, lon) {
     try {
         const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
