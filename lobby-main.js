@@ -14,9 +14,11 @@ function showDialogue(text) {
 }
 
 // --- REFERENCIAS A LOS MODELOS ---
-const roomModel = document.getElementById('room-model');       // principal (paredes)
+const roomModel = document.getElementById('room-model');   
 const cortinasModel = document.getElementById('cortinas-model');
 const pisoModel = document.getElementById('piso-model');
+const camaModel = document.getElementById('cama-model');
+const alfombraModel = document.getElementById('alfombra-model');
 const waifuModel = document.getElementById('waifu-placeholder');
 
 let wiggleReq;
