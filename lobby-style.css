@@ -21,9 +21,22 @@ body {
 /* --- LA HABITACIÓN (Fondo Decorado) --- */
 #room-background {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: 0; left: 0; width: 100%;
+    height: 100%;
     background: radial-gradient(circle at center, var(--room-wall) 0%, var(--dark-bg) 100%);
     z-index: -2;
+}
+
+/* NUEVA CLASE PARA MODELOS 3D DE FONDO */
+.bg-model {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* Encima del gradiente pero detrás del personaje y el escritorio */
+    pointer-events: none; /* Crucial para que puedas seguir haciendo clic en el personaje */
+    outline: none;
 }
 
 .room-window {
@@ -138,7 +151,6 @@ body {
     box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
     z-index: 30;
     transition: opacity 0.3s ease, transform 0.3s ease;
-    /* Efecto de respiración suave */
     animation: pulse-glow 3s infinite alternate;
 }
 

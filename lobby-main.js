@@ -5,7 +5,6 @@ const defaultState = {
     level: 1,
     affinity: 0
 };
-
 let playerState = {};
 
 // 2. Cargar datos al iniciar
@@ -42,7 +41,6 @@ function updateHUD() {
 // NUEVO: Reloj en tiempo real
 function startClock() {
     const timeDisplay = document.getElementById('current-time');
-    
     function updateTime() {
         const now = new Date();
         const hours = String(now.getHours()).padStart(2, '0');
@@ -50,7 +48,8 @@ function startClock() {
         timeDisplay.innerText = `${hours}:${minutes}`;
     }
     
-    updateTime(); // Llamada inicial
+    updateTime();
+    // Llamada inicial
     setInterval(updateTime, 60000); // Actualizar cada minuto
 }
 
@@ -62,7 +61,6 @@ function showDialogue(text) {
     
     textElement.innerText = text;
     box.classList.remove('hidden');
-    
     // Ocultar el diálogo después de 5 segundos
     clearTimeout(dialogueTimeout);
     dialogueTimeout = setTimeout(() => {
@@ -91,8 +89,8 @@ document.getElementById('waifu-placeholder').addEventListener('click', () => {
                 "Jeje, gracias por la visita.",
                 "Deberíamos ver un episodio más... solo uno más."
             ];
+        
             const fraseRandom = frases[Math.floor(Math.random() * frases.length)];
-            
             // Recompensa aleatoria pequeña
             if (Math.random() > 0.85) {
                 playerState.coins += 10;
