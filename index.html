@@ -29,22 +29,6 @@
 
     <main id="room-container">
 
-        <header id="hud-layer">
-            <div class="stats-box">
-                <span id="level">Nivel: 1</span>
-                <span id="affinity">Afinidad: ❤️ <span id="affinity-val">0</span></span>
-            </div>
-            
-            <div class="stats-box time-box">
-                <i class="far fa-clock"></i> <span id="current-time">00:00</span>
-            </div>
-
-            <div class="stats-box">
-                <span id="coins">🪙 <span id="coins-val">100</span></span>
-                <span id="energy">⚡ <span id="energy-val">100</span>/100</span>
-            </div>
-        </header>
-
         <div id="character-layer">
             <model-viewer 
                 id="waifu-placeholder" 
@@ -52,7 +36,8 @@
                 autoplay 
                 disable-zoom
                 shadow-intensity="1"
-                camera-target="0m 0.8m 0m">
+                camera-target="0m 0.8m 0m"
+                camera-orbit="0deg 75deg 3.5m">
             </model-viewer>
             
             <div id="dialogue-box" class="hidden">

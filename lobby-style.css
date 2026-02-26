@@ -49,33 +49,6 @@ body {
     pointer-events: none;
 }
 
-/* --- HUD (Barra superior) --- */
-#hud-layer {
-    display: flex;
-    justify-content: space-between;
-    padding: 20px 40px;
-    z-index: 10;
-    pointer-events: auto;
-}
-
-.stats-box {
-    background: var(--glass-bg);
-    border: 1px solid var(--neon-purple);
-    padding: 10px 20px;
-    border-radius: 8px;
-    display: flex;
-    gap: 20px;
-    font-family: 'Orbitron', sans-serif;
-    box-shadow: 0 0 15px rgba(188, 19, 254, 0.3);
-    align-items: center;
-}
-
-.time-box {
-    color: var(--neon-cyan);
-    border-color: var(--neon-cyan);
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
-}
-
 /* --- PERSONAJE --- */
 #character-layer {
     flex-grow: 1;
@@ -90,19 +63,15 @@ body {
 
 #waifu-placeholder {
     width: 100%;
-    max-width: 550px; 
-    height: 80vh; 
+    max-width: 450px; /* Reducido para que se vea un poco más lejos */
+    height: 70vh; 
     display: flex;
     justify-content: center;
     align-items: center;
-    cursor: pointer;
     outline: none;
     transition: all 0.3s;
-    pointer-events: auto;
-}
-
-#waifu-placeholder:hover {
-    filter: drop-shadow(0 0 25px rgba(188, 19, 254, 0.5));
+    /* pointer-events en none permite que el arrastre de cámara pase directo a la habitación */
+    pointer-events: none; 
 }
 
 /* --- CAJA DE DIÁLOGO --- */
@@ -238,29 +207,16 @@ body {
     box-shadow: 0 0 10px var(--neon-pink);
 }
 
-/* --- ADAPTACIÓN PARA MÓVILES (NUEVO) --- */
+/* --- ADAPTACIÓN PARA MÓVILES --- */
 @media (max-width: 768px) {
-    #hud-layer {
-        padding: 10px;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: center;
-    }
-    
-    .stats-box {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-        gap: 10px;
-    }
-    
     #waifu-placeholder {
-        height: 65vh; /* Se hace un poco más pequeño para dar espacio */
+        height: 60vh;
         max-width: 100%;
     }
     
     #dialogue-box {
         width: 90%;
-        bottom: 200px; /* Sube la caja de diálogo para que no choque con la tablet */
+        bottom: 200px; 
         padding: 15px;
     }
     
@@ -274,7 +230,7 @@ body {
         height: 180px;
         right: 0;
         left: 0;
-        margin: 0 auto; /* Centra la tablet en móviles */
+        margin: 0 auto;
         bottom: 0px;
         transform: perspective(800px) rotateX(10deg);
     }
