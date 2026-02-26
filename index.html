@@ -11,8 +11,8 @@
 </head>
 <body>
 
-    <!-- Video oculto (ya no se usa) -->
-    <video id="weather-video" autoplay loop muted playsinline style="display:none;"></video>
+    <!-- Contenedor para modelos climáticos -->
+    <div id="weather-model-container"></div>
 
     <div id="room-background">
         <!-- Modelo principal: paredes (con controles y clic) -->
@@ -33,7 +33,7 @@
             field-of-view="60deg">
         </model-viewer>
 
-        <!-- Modelo secundario: cortinas - Si no se ve, ajusta position, scale o rotation -->
+        <!-- Modelo secundario: cortinas (sin controles, se sincroniza) -->
         <model-viewer 
             id="cortinas-model" 
             class="bg-model secondary-model" 
@@ -43,9 +43,6 @@
             disable-tap
             disable-pan
             interaction-prompt="none"
-            scale="1 1 1"
-            position="0m 0m 0m"
-            rotation="0deg 0deg 0deg"
             camera-target="0m 1m 0m"
             camera-orbit="0deg 70deg 2.8m"
             min-camera-orbit="-35deg 70deg 2.8m"
@@ -53,7 +50,7 @@
             field-of-view="60deg">
         </model-viewer>
 
-        <!-- Modelo secundario: piso -->
+        <!-- Modelo secundario: piso (sin controles, se sincroniza) -->
         <model-viewer 
             id="piso-model" 
             class="bg-model secondary-model" 
@@ -63,69 +60,6 @@
             disable-tap
             disable-pan
             interaction-prompt="none"
-            scale="1 1 1"
-            position="0m 0m 0m"
-            rotation="0deg 0deg 0deg"
-            camera-target="0m 1m 0m"
-            camera-orbit="0deg 70deg 2.8m"
-            min-camera-orbit="-35deg 70deg 2.8m"
-            max-camera-orbit="35deg 70deg 2.8m"
-            field-of-view="60deg">
-        </model-viewer>
-
-        <!-- Modelo secundario: cama - Ajusta scale y position según tamaño -->
-        <model-viewer 
-            id="cama-model" 
-            class="bg-model secondary-model" 
-            src="cama.glb" 
-            shadow-intensity="1" 
-            disable-zoom 
-            disable-tap
-            disable-pan
-            interaction-prompt="none"
-            scale="0.5 0.5 0.5"   <!-- Reduce tamaño si es muy grande -->
-            position="0m 0m 0m"    <!-- Cambia para colocarla en su sitio -->
-            rotation="0deg 0deg 0deg"
-            camera-target="0m 1m 0m"
-            camera-orbit="0deg 70deg 2.8m"
-            min-camera-orbit="-35deg 70deg 2.8m"
-            max-camera-orbit="35deg 70deg 2.8m"
-            field-of-view="60deg">
-        </model-viewer>
-
-        <!-- Modelo secundario: alfombra -->
-        <model-viewer 
-            id="alfombra-model" 
-            class="bg-model secondary-model" 
-            src="alfombra.glb" 
-            shadow-intensity="1" 
-            disable-zoom 
-            disable-tap
-            disable-pan
-            interaction-prompt="none"
-            scale="1 1 1"
-            position="0m 0m 0m"
-            rotation="0deg 0deg 0deg"
-            camera-target="0m 1m 0m"
-            camera-orbit="0deg 70deg 2.8m"
-            min-camera-orbit="-35deg 70deg 2.8m"
-            max-camera-orbit="35deg 70deg 2.8m"
-            field-of-view="60deg">
-        </model-viewer>
-
-        <!-- Modelo climático (se cambia según el clima) -->
-        <model-viewer 
-            id="weather-model" 
-            class="bg-model secondary-model" 
-            src="soleado.glb" 
-            shadow-intensity="1" 
-            disable-zoom 
-            disable-tap
-            disable-pan
-            interaction-prompt="none"
-            scale="1 1 1"
-            position="0m 0m 0m"
-            rotation="0deg 0deg 0deg"
             camera-target="0m 1m 0m"
             camera-orbit="0deg 70deg 2.8m"
             min-camera-orbit="-35deg 70deg 2.8m"
@@ -135,6 +69,7 @@
     </div>
 
     <main id="room-container">
+
         <div id="character-layer">
             <model-viewer 
                 id="waifu-placeholder" 
@@ -152,6 +87,7 @@
                 <p id="dialogue-text">¡Hola! Bienvenido de nuevo a casa.<br>¿Vemos un anime hoy?</p>
             </div>
         </div>
+
     </main>
 
     <script src="lobby-main.js"></script>
