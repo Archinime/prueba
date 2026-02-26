@@ -17,15 +17,9 @@ body {
     width: 100vw;
 }
 
-/* --- VIDEO DE FONDO CLIMÁTICO --- */
+/* --- VIDEO DE FONDO CLIMÁTICO (ahora reemplazado por modelo 3D, mantenemos el selector por si acaso) --- */
 #weather-video {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    object-fit: cover;
-    z-index: 0;
+    display: none; /* Oculto, ya no se usa */
 }
 
 /* --- LA HABITACIÓN (Fondo 3D Unificado) --- */
@@ -52,7 +46,7 @@ body {
 }
 
 .secondary-model {
-    pointer-events: none; /* Evita que capturen eventos y asegura que solo el principal controle */
+    pointer-events: none; /* Evita que capturen eventos */
 }
 
 /* --- CAPA INTERACTIVA (UI y Personaje) --- */

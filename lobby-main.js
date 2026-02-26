@@ -14,11 +14,12 @@ function showDialogue(text) {
 }
 
 // --- REFERENCIAS A LOS MODELOS ---
-const roomModel = document.getElementById('room-model');   
+const roomModel = document.getElementById('room-model');       // principal (paredes)
 const cortinasModel = document.getElementById('cortinas-model');
 const pisoModel = document.getElementById('piso-model');
-const camaModel = document.getElementById('cama-model');
-const alfombraModel = document.getElementById('alfombra-model');
+const camaModel = document.getElementById('cama-model');           // NUEVO
+const alfombraModel = document.getElementById('alfombra-model');   // NUEVO
+const weatherModel = document.getElementById('weather-model');     // NUEVO (clima)
 const waifuModel = document.getElementById('waifu-placeholder');
 
 let wiggleReq;
@@ -29,8 +30,15 @@ let targetTheta = 0;
 let currentTheta = 0;
 const MAX_ANGLE = 28; // grados máximo de giro
 
-// Lista de todos los modelos de fondo para sincronizar
-const backgroundModels = [roomModel, cortinasModel, pisoModel];
+// Lista de todos los modelos de fondo (incluyendo los nuevos) para sincronizar
+const backgroundModels = [
+    roomModel, 
+    cortinasModel, 
+    pisoModel, 
+    camaModel, 
+    alfombraModel,
+    weatherModel
+];
 
 // 2. Interacción al hacer clic en la habitación (solo en el modelo principal)
 roomModel.addEventListener('click', () => {
@@ -190,8 +198,12 @@ roomModel.addEventListener('camera-change', () => {
     const roomOrbit = roomModel.getCameraOrbit();
     const settings = getSettings();
 
-    cortinasModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${settings.roomDistance}`;
-    pisoModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${settings.roomDistance}`;
+    // Aplicar a todos los modelos de fondo (excepto roomModel, pero no importa)
+    backgroundModels.forEach(model => {
+        if (model !== roomModel) { // Opcional: evitar asignar a roomModel ya que él mismo originó el cambio
+            model.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${settings.roomDistance}`;
+        }
+    });
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad ${settings.waifuPhi}deg ${settings.waifuDistance}`;
 });
 
@@ -202,31 +214,38 @@ window.addEventListener('resize', () => {
     }
 });
 
-// 4. SISTEMA CLIMÁTICO DINÁMICO
+// --- NUEVO SISTEMA CLIMÁTICO CON OBJETOS 3D ---
+function getWeatherFile(wmoCode) {
+    // Según documentación de Open-Meteo (https://open-meteo.com/en/docs)
+    if (wmoCode === 0) return 'soleado.glb';               // Despejado
+    if (wmoCode === 1) return 'principalmente_soleado.glb'; // Principalmente despejado
+    if (wmoCode === 2) return 'parcialmente_nublado.glb';   // Parcialmente nublado
+    if (wmoCode === 3) return 'nublado.glb';                // Nublado
+    if (wmoCode === 45 || wmoCode === 48) return 'neblina.glb'; // Niebla
+    if (wmoCode >= 51 && wmoCode <= 55) return 'llovizna.glb';   // Llovizna
+    if (wmoCode >= 56 && wmoCode <= 57) return 'llovizna_helada.glb';
+    if (wmoCode >= 61 && wmoCode <= 65) return 'lluvia.glb';      // Lluvia
+    if (wmoCode >= 66 && wmoCode <= 67) return 'lluvia_helada.glb';
+    if (wmoCode >= 71 && wmoCode <= 75) return 'nevada.glb';       // Nevada
+    if (wmoCode === 76) return 'granizo.glb';                      // Granizo
+    if (wmoCode >= 77 && wmoCode <= 79) return 'nevasca.glb';      // Nevada intensa
+    if (wmoCode >= 80 && wmoCode <= 82) return 'chubascos.glb';    // Chubascos
+    if (wmoCode >= 85 && wmoCode <= 86) return 'chubascos_nieve.glb';
+    if (wmoCode === 95) return 'tormenta.glb';                     // Tormenta
+    if (wmoCode >= 96 && wmoCode <= 99) return 'tormenta_granizo.glb'; // Tormenta con granizo
+    return 'soleado.glb'; // fallback
+}
+
 function initDynamicWeather() {
-    const videoElement = document.getElementById('weather-video');
-
-    function setWeatherVideo(wmoCode) {
-        let videoFile = 'soleado.mp4';
-        if (wmoCode === 0) { videoFile = 'soleado.mp4'; }
-        else if (wmoCode >= 1 && wmoCode <= 3) { videoFile = 'nublado.mp4'; }
-        else if (wmoCode === 45 || wmoCode === 48) { videoFile = 'neblina.mp4'; }
-        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) { videoFile = 'lluvioso.mp4'; }
-        else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) { videoFile = 'nevado.mp4'; }
-        else if (wmoCode >= 95 && wmoCode <= 99) { videoFile = 'tormenta.mp4'; }
-
-        if (!videoElement.src.endsWith(videoFile)) {
-            videoElement.src = videoFile;
-        }
-    }
-
-    setWeatherVideo(0);
+    const weatherModel = document.getElementById('weather-model');
 
     async function fetchWeatherByCoords(lat, lon) {
         try {
             const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
             const data = await response.json();
-            setWeatherVideo(data.current_weather.weathercode);
+            const code = data.current_weather.weathercode;
+            const file = getWeatherFile(code);
+            weatherModel.src = file;
         } catch (error) {
             console.error("Error API Clima", error);
         }
@@ -263,7 +282,7 @@ window.onload = () => {
     if (window.innerWidth <= 768) {
         startCustomWiggle();
     }
-    initDynamicWeather();
+    initDynamicWeather(); // Ahora carga modelos GLB en lugar de videos
 
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");

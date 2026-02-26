@@ -11,7 +11,8 @@
 </head>
 <body>
 
-    <video id="weather-video" autoplay loop muted playsinline></video>
+    <!-- Video ya no se usa, lo ocultamos y lo reemplazamos por modelo climático -->
+    <video id="weather-video" autoplay loop muted playsinline style="display:none;"></video>
 
     <div id="room-background">
         <!-- Modelo principal: paredes (con controles y clic) -->
@@ -32,7 +33,7 @@
             field-of-view="60deg">
         </model-viewer>
 
-        <!-- Modelo secundario: cortinas (sin controles, se sincroniza) -->
+        <!-- Modelo secundario: cortinas (se sincroniza) - Ajusta posición según tu modelo -->
         <model-viewer 
             id="cortinas-model" 
             class="bg-model secondary-model" 
@@ -42,6 +43,7 @@
             disable-tap
             disable-pan
             interaction-prompt="none"
+            position="0m 0m 0m"  <!-- CAMBIA ESTO si las cortinas no están en su lugar -->
             camera-target="0m 1m 0m"
             camera-orbit="0deg 70deg 2.8m"
             min-camera-orbit="-35deg 70deg 2.8m"
@@ -49,7 +51,7 @@
             field-of-view="60deg">
         </model-viewer>
 
-        <!-- Modelo secundario: piso (sin controles, se sincroniza) -->
+        <!-- Modelo secundario: piso -->
         <model-viewer 
             id="piso-model" 
             class="bg-model secondary-model" 
@@ -65,13 +67,12 @@
             max-camera-orbit="35deg 70deg 2.8m"
             field-of-view="60deg">
         </model-viewer>
-    </div>
 
-        <!-- Modelo secundario: cama
+        <!-- NUEVO: Modelo de cama -->
         <model-viewer 
             id="cama-model" 
             class="bg-model secondary-model" 
-            src="piso.glb" 
+            src="cama.glb" 
             shadow-intensity="1" 
             disable-zoom 
             disable-tap
@@ -83,9 +84,8 @@
             max-camera-orbit="35deg 70deg 2.8m"
             field-of-view="60deg">
         </model-viewer>
-    </div>
 
-        <!-- Modelo secundario: alfombra
+        <!-- NUEVO: Modelo de alfombra -->
         <model-viewer 
             id="alfombra-model" 
             class="bg-model secondary-model" 
@@ -101,13 +101,28 @@
             max-camera-orbit="35deg 70deg 2.8m"
             field-of-view="60deg">
         </model-viewer>
-    </div>
 
+        <!-- NUEVO: Modelo climático (se sincroniza con la cámara) -->
+        <model-viewer 
+            id="weather-model" 
+            class="bg-model secondary-model" 
+            src="soleado.glb"  <!-- Inicialmente soleado, luego JS lo cambia -->
+            shadow-intensity="1" 
+            disable-zoom 
+            disable-tap
+            disable-pan
+            interaction-prompt="none"
+            camera-target="0m 1m 0m"
+            camera-orbit="0deg 70deg 2.8m"
+            min-camera-orbit="-35deg 70deg 2.8m"
+            max-camera-orbit="35deg 70deg 2.8m"
+            field-of-view="60deg">
+        </model-viewer>
+    </div>
 
     <main id="room-container">
 
         <div id="character-layer">
-            <!-- ATRIBUTOS ELIMINADOS: position, camera-target, camera-orbit, field-of-view. Todo lo controla JavaScript -->
             <model-viewer 
                 id="waifu-placeholder" 
                 src="lunari_saluda.glb" 
