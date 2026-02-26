@@ -70,20 +70,16 @@
     <main id="room-container">
 
         <div id="character-layer">
+            <!-- ATRIBUTOS ELIMINADOS: position, camera-target, camera-orbit, field-of-view. Todo lo controla JavaScript -->
             <model-viewer 
                 id="waifu-placeholder" 
                 src="lunari_saluda.glb" 
                 autoplay 
-                scale="0.8 0.8 0.8"  <!-- Valor por defecto, se ajustará por JS -->
-                position="0m 0.1m 0m"
                 disable-zoom
                 disable-tap
                 disable-pan
                 interaction-prompt="none"
-                shadow-intensity="1"
-                camera-target="0m 0.7m 0m"
-                camera-orbit="0deg 60deg 5.5m"  <!-- Valor por defecto -->
-                field-of-view="60deg">
+                shadow-intensity="1">
             </model-viewer>
             
             <div id="dialogue-box" class="hidden">
