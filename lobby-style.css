@@ -81,11 +81,11 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end; /* Lo baja al piso en lugar de centrarlo */
+    justify-content: flex-end;
     align-items: center;
     z-index: 5;
     position: relative;
-    padding-bottom: 5vh; /* Ajuste fino para que los pies toquen el suelo 3D */
+    padding-bottom: 5vh;
 }
 
 #waifu-placeholder {
@@ -236,4 +236,53 @@ body {
     justify-content: center;
     align-items: center;
     box-shadow: 0 0 10px var(--neon-pink);
+}
+
+/* --- ADAPTACIÓN PARA MÓVILES (NUEVO) --- */
+@media (max-width: 768px) {
+    #hud-layer {
+        padding: 10px;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+    
+    .stats-box {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        gap: 10px;
+    }
+    
+    #waifu-placeholder {
+        height: 65vh; /* Se hace un poco más pequeño para dar espacio */
+        max-width: 100%;
+    }
+    
+    #dialogue-box {
+        width: 90%;
+        bottom: 200px; /* Sube la caja de diálogo para que no choque con la tablet */
+        padding: 15px;
+    }
+    
+    #dialogue-text {
+        font-size: 0.95rem;
+    }
+    
+    #tablet-ui {
+        width: 90%;
+        max-width: 350px;
+        height: 180px;
+        right: 0;
+        left: 0;
+        margin: 0 auto; /* Centra la tablet en móviles */
+        bottom: 0px;
+        transform: perspective(800px) rotateX(10deg);
+    }
+
+    .tablet-screen {
+        padding: 10px;
+    }
+
+    .app-icon i { font-size: 1.6rem; }
+    .app-icon span { font-size: 0.65rem; }
 }
