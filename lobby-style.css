@@ -52,7 +52,7 @@ body {
 }
 
 .secondary-model {
-    pointer-events: none; /* Evita que capturen eventos y asegura que solo el principal controle */
+    pointer-events: none;
 }
 
 /* --- CAPA INTERACTIVA (UI y Personaje) --- */

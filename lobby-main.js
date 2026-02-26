@@ -46,7 +46,7 @@ roomModel.addEventListener('click', () => {
 function getDistances() {
     const isMobile = window.innerWidth <= 768;
     const roomDistance = isMobile ? '2.2m' : '2.8m';
-    const waifuDistance = isMobile ? '2.7m' : '3.3m';
+    const waifuDistance = isMobile ? '3.2m' : '3.8m'; // Más alejado para evitar recortes
     return { roomDistance, waifuDistance, isMobile };
 }
 
@@ -56,10 +56,9 @@ function updateCameraSettings() {
     // Aplicar a todos los modelos de fondo
     backgroundModels.forEach(model => {
         if (isMobile) {
-            // En móvil permitimos el rango completo pero controlaremos el movimiento manualmente
             model.minCameraOrbit = `-35deg 70deg ${roomDistance}`;
             model.maxCameraOrbit = `35deg 70deg ${roomDistance}`;
-            if (!isWiggling && !isTouching) model.cameraOrbit = `0deg 70deg ${roomDistance}`;
+            if (!isWiggling && !isTouching) model.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
         } else {
             // En PC bloqueamos la rotación (solo 0deg)
             model.minCameraOrbit = `0deg 70deg ${roomDistance}`;
@@ -69,7 +68,7 @@ function updateCameraSettings() {
     });
 
     if (!isWiggling && !isTouching) {
-        waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
+        waifuModel.cameraOrbit = `${currentTheta}deg 70deg ${waifuDistance}`;
     }
 }
 
@@ -105,10 +104,10 @@ function applyOrbitToAll(thetaDeg, phiDeg, roomDist, waifuDist) {
     backgroundModels.forEach(model => {
         model.cameraOrbit = `${thetaDeg}deg ${phiDeg}deg ${roomDist}`;
     });
-    waifuModel.cameraOrbit = `${thetaDeg}deg 75deg ${waifuDist}`;
+    waifuModel.cameraOrbit = `${thetaDeg}deg 70deg ${waifuDist}`;
 }
 
-// --- SISTEMA TÁCTIL PARA MÓVILES (reemplaza el arrastre libre) ---
+// --- SISTEMA TÁCTIL PARA MÓVILES (deslizamiento libre sin retorno) ---
 function initTouchControls() {
     if (window.innerWidth > 768) {
         // En PC, habilitamos camera-controls normal
@@ -120,47 +119,40 @@ function initTouchControls() {
     roomModel.cameraControls = false;
 
     let touchStartX = 0;
-    let touchStartY = 0;
     const sensitivity = 0.5; // sensibilidad del deslizamiento
 
     roomModel.addEventListener('touchstart', (e) => {
         if (isWiggling) {
-            // Cancelar wiggle automático si el usuario interactúa
             isWiggling = false;
             cancelAnimationFrame(wiggleReq);
         }
         if (isTouching) return;
         const touch = e.touches[0];
         touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
         isTouching = true;
-        // Detener cualquier animación táctil previa
         if (touchAnimReq) cancelAnimationFrame(touchAnimReq);
     });
 
     roomModel.addEventListener('touchmove', (e) => {
-        e.preventDefault(); // Evita scroll
+        e.preventDefault();
         if (!isTouching) return;
         const touch = e.touches[0];
         const deltaX = touch.clientX - touchStartX;
-        // Mapear el deslizamiento a un ángulo objetivo (máximo ±MAX_ANGLE)
+        // Actualizar el ángulo objetivo directamente (limitado)
         targetTheta = Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, deltaX * sensitivity));
-        // Animar hacia el objetivo
         startTouchAnimation();
     });
 
     roomModel.addEventListener('touchend', () => {
         if (!isTouching) return;
         isTouching = false;
-        // Regresar suavemente a 0
-        targetTheta = 0;
-        startTouchAnimation();
+        // No regresamos a 0, simplemente dejamos de mover
+        // La animación continuará hasta alcanzar targetTheta (que ya es el último valor)
     });
 
     roomModel.addEventListener('touchcancel', () => {
         isTouching = false;
-        targetTheta = 0;
-        startTouchAnimation();
+        // Misma lógica: no regresar
     });
 }
 
@@ -168,12 +160,12 @@ function startTouchAnimation() {
     if (touchAnimReq) cancelAnimationFrame(touchAnimReq);
     const { roomDistance, waifuDistance } = getDistances();
     const animStep = () => {
-        // Interpolación lineal suave hacia el objetivo
+        // Interpolación suave hacia targetTheta
         const diff = targetTheta - currentTheta;
         if (Math.abs(diff) < 0.1) {
             currentTheta = targetTheta;
         } else {
-            currentTheta += diff * 0.1; // velocidad de transición
+            currentTheta += diff * 0.1;
         }
         applyOrbitToAll(currentTheta, 70, roomDistance, waifuDistance);
         if (Math.abs(currentTheta - targetTheta) > 0.01) {
@@ -185,22 +177,8 @@ function startTouchAnimation() {
     touchAnimReq = requestAnimationFrame(animStep);
 }
 
-// Detener wiggle si el usuario interactúa
-roomModel.addEventListener('pointerdown', () => {
-    if (window.innerWidth > 768) return; // solo en móvil manejamos el touch aparte
-    isWiggling = false;
-    cancelAnimationFrame(wiggleReq);
-});
-
-window.addEventListener('resize', () => {
-    updateCameraSettings();
-    // Reiniciar wiggle solo si no está tocando
-    if (!isTouching && !isWiggling && window.innerWidth <= 768) {
-        startCustomWiggle();
-    }
-});
-
-// 3. Sincronización de cámaras (solo para PC, en móvil la manejamos manual)
+// Detener wiggle si el usuario interactúa (ya manejado en touchstart)
+// Sincronización para PC
 roomModel.addEventListener('camera-change', () => {
     if (window.innerWidth <= 768) return; // en móvil no usamos este evento
     if (isWiggling) return;
@@ -210,7 +188,15 @@ roomModel.addEventListener('camera-change', () => {
 
     cortinasModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
     pisoModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
-    waifuModel.cameraOrbit = `${roomOrbit.theta}rad 75deg ${waifuDistance}`;
+    waifuModel.cameraOrbit = `${roomOrbit.theta}rad 70deg ${waifuDistance}`;
+});
+
+window.addEventListener('resize', () => {
+    updateCameraSettings();
+    if (!isTouching && !isWiggling && window.innerWidth <= 768) {
+        // Reiniciar wiggle si no hay interacción
+        startCustomWiggle();
+    }
 });
 
 // 4. SISTEMA CLIMÁTICO DINÁMICO
@@ -270,9 +256,9 @@ function initDynamicWeather() {
 // 5. Inicialización
 window.onload = () => {
     updateCameraSettings();
-    initTouchControls(); // Inicializar controles táctiles para móvil
+    initTouchControls();
     if (window.innerWidth <= 768) {
-        startCustomWiggle(); // Wiggle automático solo en móvil
+        startCustomWiggle();
     }
     initDynamicWeather();
 
