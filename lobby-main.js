@@ -46,7 +46,7 @@ roomModel.addEventListener('click', () => {
 function getDistances() {
     const isMobile = window.innerWidth <= 768;
     const roomDistance = isMobile ? '2.2m' : '2.8m';
-    const waifuDistance = isMobile ? '3.4m' : '3.8m'; // Ligeramente más lejos en móvil para ver los pies
+    const waifuDistance = isMobile ? '4.0m' : '4.5m'; // Más lejos para ver cuerpo completo
     return { roomDistance, waifuDistance, isMobile };
 }
 
@@ -68,7 +68,8 @@ function updateCameraSettings() {
     });
 
     if (!isWiggling && !isTouching) {
-        waifuModel.cameraOrbit = `${currentTheta}deg 70deg ${waifuDistance}`;
+        // Ángulo vertical más bajo (65°) para mejor visión de la cara
+        waifuModel.cameraOrbit = `${currentTheta}deg 65deg ${waifuDistance}`;
     }
 }
 
@@ -88,11 +89,11 @@ function startCustomWiggle() {
         if (elapsed < duration) {
             const progress = elapsed / duration;
             currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
-            applyOrbitToAll(currentTheta, 70, roomDistance, waifuDistance);
+            applyOrbitToAll(currentTheta, 70, 65, roomDistance, waifuDistance);
             wiggleReq = requestAnimationFrame(step);
         } else {
             currentTheta = 0;
-            applyOrbitToAll(0, 70, roomDistance, waifuDistance);
+            applyOrbitToAll(0, 70, 65, roomDistance, waifuDistance);
             isWiggling = false;
         }
     }
@@ -100,11 +101,11 @@ function startCustomWiggle() {
 }
 
 // Función para aplicar la misma órbita a todos los modelos
-function applyOrbitToAll(thetaDeg, phiDeg, roomDist, waifuDist) {
+function applyOrbitToAll(thetaDeg, roomPhiDeg, waifuPhiDeg, roomDist, waifuDist) {
     backgroundModels.forEach(model => {
-        model.cameraOrbit = `${thetaDeg}deg ${phiDeg}deg ${roomDist}`;
+        model.cameraOrbit = `${thetaDeg}deg ${roomPhiDeg}deg ${roomDist}`;
     });
-    waifuModel.cameraOrbit = `${thetaDeg}deg 70deg ${waifuDist}`;
+    waifuModel.cameraOrbit = `${thetaDeg}deg ${waifuPhiDeg}deg ${waifuDist}`;
 }
 
 // --- SISTEMA TÁCTIL PARA MÓVILES (deslizamiento libre sin retorno) ---
@@ -147,12 +148,10 @@ function initTouchControls() {
         if (!isTouching) return;
         isTouching = false;
         // No regresamos a 0, simplemente dejamos de mover
-        // La animación continuará hasta alcanzar targetTheta (que ya es el último valor)
     });
 
     roomModel.addEventListener('touchcancel', () => {
         isTouching = false;
-        // Misma lógica: no regresar
     });
 }
 
@@ -160,14 +159,13 @@ function startTouchAnimation() {
     if (touchAnimReq) cancelAnimationFrame(touchAnimReq);
     const { roomDistance, waifuDistance } = getDistances();
     const animStep = () => {
-        // Interpolación suave hacia targetTheta
         const diff = targetTheta - currentTheta;
         if (Math.abs(diff) < 0.1) {
             currentTheta = targetTheta;
         } else {
             currentTheta += diff * 0.1;
         }
-        applyOrbitToAll(currentTheta, 70, roomDistance, waifuDistance);
+        applyOrbitToAll(currentTheta, 70, 65, roomDistance, waifuDistance);
         if (Math.abs(currentTheta - targetTheta) > 0.01) {
             touchAnimReq = requestAnimationFrame(animStep);
         } else {
@@ -187,7 +185,7 @@ roomModel.addEventListener('camera-change', () => {
 
     cortinasModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
     pisoModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
-    waifuModel.cameraOrbit = `${roomOrbit.theta}rad 70deg ${waifuDistance}`;
+    waifuModel.cameraOrbit = `${roomOrbit.theta}rad 65deg ${waifuDistance}`;
 });
 
 window.addEventListener('resize', () => {
