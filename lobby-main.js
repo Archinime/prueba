@@ -14,12 +14,12 @@ function showDialogue(text) {
 }
 
 // --- REFERENCIAS A LOS MODELOS ---
-const roomModel = document.getElementById('room-model');       // principal (paredes)
+const roomModel = document.getElementById('room-model');
 const cortinasModel = document.getElementById('cortinas-model');
 const pisoModel = document.getElementById('piso-model');
-const camaModel = document.getElementById('cama-model');           // NUEVO
-const alfombraModel = document.getElementById('alfombra-model');   // NUEVO
-const weatherModel = document.getElementById('weather-model');     // NUEVO (clima)
+const camaModel = document.getElementById('cama-model');
+const alfombraModel = document.getElementById('alfombra-model');
+const weatherModel = document.getElementById('weather-model');
 const waifuModel = document.getElementById('waifu-placeholder');
 
 let wiggleReq;
@@ -28,9 +28,9 @@ let touchAnimReq;
 let isTouching = false;
 let targetTheta = 0;
 let currentTheta = 0;
-const MAX_ANGLE = 28; // grados máximo de giro
+const MAX_ANGLE = 28;
 
-// Lista de todos los modelos de fondo (incluyendo los nuevos) para sincronizar
+// Lista de todos los modelos de fondo (incluyendo los nuevos) para sincronizar cámara
 const backgroundModels = [
     roomModel, 
     cortinasModel, 
@@ -40,7 +40,7 @@ const backgroundModels = [
     weatherModel
 ];
 
-// 2. Interacción al hacer clic en la habitación (solo en el modelo principal)
+// 2. Interacción al hacer clic en la habitación
 roomModel.addEventListener('click', () => {
     const frases = [
         "¡Oye, me haces cosquillas!",
@@ -52,16 +52,16 @@ roomModel.addEventListener('click', () => {
     showDialogue(fraseRandom);
 });
 
-// --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
+// --- CONFIGURACIÓN RESPONSIVA ---
 function getSettings() {
     const isMobile = window.innerWidth <= 768;
     return {
         isMobile,
         roomDistance: isMobile ? '2.2m' : '2.8m',
-        waifuDistance: isMobile ? '6.0m' : '5.5m', // Móvil más lejos
-        waifuScale: isMobile ? 0.7 : 0.8,          // Móvil más pequeño
-        waifuTargetY: '0.7m',                       // Punto de mira constante
-        waifuPhi: 60                                 // Ángulo vertical
+        waifuDistance: isMobile ? '6.0m' : '5.5m',
+        waifuScale: isMobile ? 0.7 : 0.8,
+        waifuTargetY: '0.7m',
+        waifuPhi: 60
     };
 }
 
@@ -71,7 +71,7 @@ function applySettings() {
     // Ajustar escala del personaje
     waifuModel.scale = `${settings.waifuScale} ${settings.waifuScale} ${settings.waifuScale}`;
     
-    // Aplicar a todos los modelos de fondo
+    // Aplicar configuración de cámara a los modelos de fondo (solo órbita, no posición local)
     backgroundModels.forEach(model => {
         if (settings.isMobile) {
             model.minCameraOrbit = `-35deg 70deg ${settings.roomDistance}`;
@@ -89,7 +89,7 @@ function applySettings() {
     }
 }
 
-// --- ANIMACIÓN DE INDICACIÓN AUTOMÁTICA (10 SEGUNDOS, solo en móvil) ---
+// --- ANIMACIÓN DE INDICACIÓN AUTOMÁTICA (móvil) ---
 function startCustomWiggle() {
     if (window.innerWidth > 768) return;
     const settings = getSettings();
@@ -124,19 +124,17 @@ function applyOrbitToAll(thetaDeg, roomPhiDeg, waifuPhiDeg, roomDist, waifuDist)
     waifuModel.cameraOrbit = `${thetaDeg}deg ${waifuPhiDeg}deg ${waifuDist}`;
 }
 
-// --- SISTEMA TÁCTIL PARA MÓVILES (deslizamiento libre sin retorno) ---
+// --- SISTEMA TÁCTIL PARA MÓVILES ---
 function initTouchControls() {
     if (window.innerWidth > 768) {
-        // En PC, habilitamos camera-controls normal
         roomModel.cameraControls = true;
         return;
     }
 
-    // En móvil, desactivamos camera-controls para evitar arrastre libre
     roomModel.cameraControls = false;
 
     let touchStartX = 0;
-    const sensitivity = 0.5; // sensibilidad del deslizamiento
+    const sensitivity = 0.5;
 
     roomModel.addEventListener('touchstart', (e) => {
         if (isWiggling) {
@@ -162,7 +160,6 @@ function initTouchControls() {
     roomModel.addEventListener('touchend', () => {
         if (!isTouching) return;
         isTouching = false;
-        // No regresamos a 0
     });
 
     roomModel.addEventListener('touchcancel', () => {
@@ -192,15 +189,14 @@ function startTouchAnimation() {
 
 // Sincronización para PC
 roomModel.addEventListener('camera-change', () => {
-    if (window.innerWidth <= 768) return; // en móvil no usamos este evento
+    if (window.innerWidth <= 768) return;
     if (isWiggling) return;
 
     const roomOrbit = roomModel.getCameraOrbit();
     const settings = getSettings();
 
-    // Aplicar a todos los modelos de fondo (excepto roomModel, pero no importa)
     backgroundModels.forEach(model => {
-        if (model !== roomModel) { // Opcional: evitar asignar a roomModel ya que él mismo originó el cambio
+        if (model !== roomModel) {
             model.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${settings.roomDistance}`;
         }
     });
@@ -214,26 +210,25 @@ window.addEventListener('resize', () => {
     }
 });
 
-// --- NUEVO SISTEMA CLIMÁTICO CON OBJETOS 3D ---
+// --- SISTEMA CLIMÁTICO CON OBJETOS 3D ---
 function getWeatherFile(wmoCode) {
-    // Según documentación de Open-Meteo (https://open-meteo.com/en/docs)
-    if (wmoCode === 0) return 'soleado.glb';               // Despejado
-    if (wmoCode === 1) return 'principalmente_soleado.glb'; // Principalmente despejado
-    if (wmoCode === 2) return 'parcialmente_nublado.glb';   // Parcialmente nublado
-    if (wmoCode === 3) return 'nublado.glb';                // Nublado
-    if (wmoCode === 45 || wmoCode === 48) return 'neblina.glb'; // Niebla
-    if (wmoCode >= 51 && wmoCode <= 55) return 'llovizna.glb';   // Llovizna
+    if (wmoCode === 0) return 'soleado.glb';
+    if (wmoCode === 1) return 'principalmente_soleado.glb';
+    if (wmoCode === 2) return 'parcialmente_nublado.glb';
+    if (wmoCode === 3) return 'nublado.glb';
+    if (wmoCode === 45 || wmoCode === 48) return 'neblina.glb';
+    if (wmoCode >= 51 && wmoCode <= 55) return 'llovizna.glb';
     if (wmoCode >= 56 && wmoCode <= 57) return 'llovizna_helada.glb';
-    if (wmoCode >= 61 && wmoCode <= 65) return 'lluvia.glb';      // Lluvia
+    if (wmoCode >= 61 && wmoCode <= 65) return 'lluvia.glb';
     if (wmoCode >= 66 && wmoCode <= 67) return 'lluvia_helada.glb';
-    if (wmoCode >= 71 && wmoCode <= 75) return 'nevada.glb';       // Nevada
-    if (wmoCode === 76) return 'granizo.glb';                      // Granizo
-    if (wmoCode >= 77 && wmoCode <= 79) return 'nevasca.glb';      // Nevada intensa
-    if (wmoCode >= 80 && wmoCode <= 82) return 'chubascos.glb';    // Chubascos
+    if (wmoCode >= 71 && wmoCode <= 75) return 'nevada.glb';
+    if (wmoCode === 76) return 'granizo.glb';
+    if (wmoCode >= 77 && wmoCode <= 79) return 'nevasca.glb';
+    if (wmoCode >= 80 && wmoCode <= 82) return 'chubascos.glb';
     if (wmoCode >= 85 && wmoCode <= 86) return 'chubascos_nieve.glb';
-    if (wmoCode === 95) return 'tormenta.glb';                     // Tormenta
-    if (wmoCode >= 96 && wmoCode <= 99) return 'tormenta_granizo.glb'; // Tormenta con granizo
-    return 'soleado.glb'; // fallback
+    if (wmoCode === 95) return 'tormenta.glb';
+    if (wmoCode >= 96 && wmoCode <= 99) return 'tormenta_granizo.glb';
+    return 'soleado.glb';
 }
 
 function initDynamicWeather() {
@@ -282,7 +277,7 @@ window.onload = () => {
     if (window.innerWidth <= 768) {
         startCustomWiggle();
     }
-    initDynamicWeather(); // Ahora carga modelos GLB en lugar de videos
+    initDynamicWeather();
 
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");

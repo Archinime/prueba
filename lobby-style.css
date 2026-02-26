@@ -17,9 +17,9 @@ body {
     width: 100vw;
 }
 
-/* --- VIDEO DE FONDO CLIMÁTICO (ahora reemplazado por modelo 3D, mantenemos el selector por si acaso) --- */
+/* --- VIDEO DE FONDO CLIMÁTICO (oculto) --- */
 #weather-video {
-    display: none; /* Oculto, ya no se usa */
+    display: none;
 }
 
 /* --- LA HABITACIÓN (Fondo 3D Unificado) --- */
