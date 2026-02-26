@@ -12,7 +12,18 @@
 <body>
 
     <div id="room-background">
-        <model-viewer id="room-model" class="bg-model" src="pared_piso.glb" shadow-intensity="1" camera-controls disable-zoom camera-target="0m 1m 0m"></model-viewer>
+        <model-viewer 
+            id="room-model" 
+            class="bg-model" 
+            src="pared_piso.glb" 
+            shadow-intensity="1" 
+            camera-controls 
+            disable-zoom 
+            camera-target="0m 1.5m 0m"
+            camera-orbit="0deg 80deg 1.5m" 
+            field-of-view="70deg"
+            min-camera-orbit="auto auto 0m">
+        </model-viewer>
     </div>
 
     <main id="room-container">
