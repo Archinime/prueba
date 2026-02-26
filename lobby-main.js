@@ -46,7 +46,7 @@ roomModel.addEventListener('click', () => {
 function getDistances() {
     const isMobile = window.innerWidth <= 768;
     const roomDistance = isMobile ? '2.2m' : '2.8m';
-    const waifuDistance = isMobile ? '3.2m' : '3.8m'; // Más alejado para evitar recortes
+    const waifuDistance = isMobile ? '3.4m' : '3.8m'; // Ligeramente más lejos en móvil para ver los pies
     return { roomDistance, waifuDistance, isMobile };
 }
 
@@ -177,7 +177,6 @@ function startTouchAnimation() {
     touchAnimReq = requestAnimationFrame(animStep);
 }
 
-// Detener wiggle si el usuario interactúa (ya manejado en touchstart)
 // Sincronización para PC
 roomModel.addEventListener('camera-change', () => {
     if (window.innerWidth <= 768) return; // en móvil no usamos este evento
@@ -194,7 +193,6 @@ roomModel.addEventListener('camera-change', () => {
 window.addEventListener('resize', () => {
     updateCameraSettings();
     if (!isTouching && !isWiggling && window.innerWidth <= 768) {
-        // Reiniciar wiggle si no hay interacción
         startCustomWiggle();
     }
 });
