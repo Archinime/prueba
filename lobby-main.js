@@ -105,6 +105,7 @@ roomModel.addEventListener('camera-change', () => {
 });
 
 // 5. SISTEMA CLIMÁTICO DINÁMICO (Mejorado con respaldo IP)
+// Ahora el elemento video está dentro de #window-video-mask y se actualiza aquí.
 function initDynamicWeather() {
     const videoElement = document.getElementById('weather-video');
 
@@ -120,8 +121,13 @@ function initDynamicWeather() {
         else if (wmoCode >= 95 && wmoCode <= 99) { videoFile = 'tormenta.mp4'; } // Tormentas
         
         // Evitar que el video se reinicie si ya tiene el source correcto asignado
-        if (!videoElement.src.endsWith(videoFile)) {
+        // Usamos currentSrc o src y comparamos el nombre de archivo al final.
+        const currentName = (videoElement.currentSrc || videoElement.src || '').split('/').pop();
+        if (currentName !== videoFile) {
             videoElement.src = videoFile;
+            // intentar cargar y reproducir sin bloquear (capturar promesa)
+            videoElement.load();
+            videoElement.play().catch(() => {/* auto-play puede fallar en algunos navegadores */});
         }
     }
 
@@ -133,7 +139,9 @@ function initDynamicWeather() {
         try {
             const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
             const data = await response.json();
-            setWeatherVideo(data.current_weather.weathercode);
+            if (data && data.current_weather && typeof data.current_weather.weathercode !== 'undefined') {
+                setWeatherVideo(data.current_weather.weathercode);
+            }
         } catch (error) {
             console.error("Error API Clima, manteniendo el clima por defecto.", error);
         }
@@ -146,8 +154,9 @@ function initDynamicWeather() {
             // Usamos geojs.io que es gratuita y no requiere API Key
             const ipResponse = await fetch('https://get.geojs.io/v1/ip/geo.json');
             const ipData = await ipResponse.json();
-            // Pasamos las coordenadas de la IP a nuestra función del clima
-            await fetchWeatherByCoords(ipData.latitude, ipData.longitude);
+            if (ipData && ipData.latitude && ipData.longitude) {
+                await fetchWeatherByCoords(ipData.latitude, ipData.longitude);
+            }
         } catch (error) {
             console.error("Error al obtener ubicación por IP, se mantendrá el clima predeterminado.", error);
         }

@@ -11,9 +11,14 @@
 </head>
 <body>
 
-    <video id="weather-video" autoplay loop muted playsinline></video>
-
+    <!-- NOTE: ahora el video climatico está dentro de #room-background y en una máscara
+         llamada #window-video-mask para que solo se vea en la zona de la ventana -->
     <div id="room-background">
+        <!-- contenedor máscara donde se reproducirá el video (detrás del modelo) -->
+        <div id="window-video-mask" aria-hidden="true">
+            <video id="weather-video" autoplay loop muted playsinline></video>
+        </div>
+
         <model-viewer 
             id="room-model" 
             class="bg-model" 
