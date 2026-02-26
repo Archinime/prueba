@@ -6,35 +6,18 @@
     <title>Archinime OS - Habitación de Lunari</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- mantenemos model-viewer (para la waifu) -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <link rel="stylesheet" href="lobby-style.css">
 </head>
 <body>
 
-    <!-- NOTE: ahora el video climatico está dentro de #room-background y en una máscara
-         llamada #window-video-mask para que solo se vea en la zona de la ventana -->
-    <div id="room-background">
-        <!-- contenedor máscara donde se reproducirá el video (detrás del modelo) -->
-        <div id="window-video-mask" aria-hidden="true">
-            <video id="weather-video" autoplay loop muted playsinline></video>
-        </div>
+    <video id="weather-video" autoplay loop muted playsinline></video>
 
-        <model-viewer 
-            id="room-model" 
-            class="bg-model" 
-            src="pared_piso.glb" 
-            shadow-intensity="1" 
-            camera-controls 
-            disable-zoom 
-            disable-tap
-            disable-pan
-            interaction-prompt="none"
-            camera-target="0m 1m 0m"
-            camera-orbit="0deg 70deg 3.5m" 
-            min-camera-orbit="-35deg 70deg 3.5m"
-            max-camera-orbit="35deg 70deg 3.5m"
-            field-of-view="60deg">
-        </model-viewer>
+    <div id="room-background">
+        <!-- Reemplazamos el model-viewer de la habitación por un contenedor.
+             Three.js inyectará un canvas aquí, pero mantenemos el mismo id y clase. -->
+        <div id="room-model" class="bg-model" style="touch-action: none;"></div>
     </div>
 
     <main id="room-container">
@@ -61,6 +44,7 @@
 
     </main>
 
-    <script src="lobby-main.js"></script>
+    <!-- Ahora cargamos el script como module para poder importar three.js/GLTFLoader/OrbitControls -->
+    <script type="module" src="lobby-main.js"></script>
 </body>
 </html>
