@@ -61,7 +61,6 @@ function showDialogue(text) {
     
     textElement.innerText = text;
     box.classList.remove('hidden');
-    
     // Ocultar el diálogo después de 5 segundos
     clearTimeout(dialogueTimeout);
     dialogueTimeout = setTimeout(() => {
@@ -92,7 +91,6 @@ document.getElementById('waifu-placeholder').addEventListener('click', () => {
             ];
         
             const fraseRandom = frases[Math.floor(Math.random() * frases.length)];
-            
             // Recompensa aleatoria pequeña
             if (Math.random() > 0.85) {
                 playerState.coins += 10;
@@ -107,6 +105,17 @@ document.getElementById('waifu-placeholder').addEventListener('click', () => {
     } else {
         showDialogue("Estoy muy cansada... dejemos de jugar y descansemos un poco. (Energía insuficiente)");
     }
+});
+
+// 7. Sincronización de Cámaras (Efecto de Inmersión)
+const roomModel = document.getElementById('room-model');
+const waifuModel = document.getElementById('waifu-placeholder');
+
+roomModel.addEventListener('camera-change', () => {
+    // Obtenemos el giro de la habitación y se lo aplicamos al personaje
+    // Así ambos modelos rotan de forma sincronizada al arrastrar el ratón
+    const roomOrbit = roomModel.getCameraOrbit();
+    waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto auto`;
 });
 
 // Arrancar el sistema cuando carga la página

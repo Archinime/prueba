@@ -5,7 +5,6 @@
     --neon-pink: #ff0055;
     --dark-bg: #050505;
     --glass-bg: rgba(10, 12, 16, 0.85);
-    /* Se eliminó la variable del muro antiguo que generaba el morado */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
@@ -24,34 +23,30 @@ body {
     top: 0; left: 0;
     width: 100vw;
     height: 100vh;
-    background: var(--dark-bg); /* ADIÓS AL FONDO MORADO */
-    z-index: 1; /* Puesto en 1 para que reciba clics de cámara */
+    background: var(--dark-bg);
+    z-index: 1;
 }
 
-/* MODELO 3D DE FONDO */
 .bg-model {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     outline: none;
 }
 
 #room-model {
     z-index: 2;
-    pointer-events: auto; /* IMPORTANTE: Recibe los gestos para girar la habitación */
+    pointer-events: auto;
 }
 
 /* --- CAPA INTERACTIVA (UI y Personaje) --- */
 #room-container {
     position: relative;
-    width: 100%;
-    height: 100%;
+    width: 100%; height: 100%;
     display: flex;
     flex-direction: column;
     z-index: 10;
-    pointer-events: none; /* DEJA PASAR el ratón al piso 3D para poder girar la sala */
+    pointer-events: none;
 }
 
 /* --- HUD (Barra superior) --- */
@@ -60,7 +55,7 @@ body {
     justify-content: space-between;
     padding: 20px 40px;
     z-index: 10;
-    pointer-events: auto; /* Reactiva los clics aquí */
+    pointer-events: auto;
 }
 
 .stats-box {
@@ -86,23 +81,24 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-end; /* Lo baja al piso en lugar de centrarlo */
     align-items: center;
     z-index: 5;
     position: relative;
+    padding-bottom: 5vh; /* Ajuste fino para que los pies toquen el suelo 3D */
 }
 
 #waifu-placeholder {
     width: 100%;
-    max-width: 500px; /* IMPORTANTE: Limita el ancho del personaje para poder girar la sala por los lados */
-    height: 75vh;
+    max-width: 550px; 
+    height: 80vh; 
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
     outline: none;
     transition: all 0.3s;
-    pointer-events: auto; /* Reactiva los clics solo en el personaje */
+    pointer-events: auto;
 }
 
 #waifu-placeholder:hover {
@@ -166,7 +162,7 @@ body {
     transform: perspective(800px) rotateX(15deg);
     z-index: 20;
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    pointer-events: auto; /* Reactiva los clics en la tablet */
+    pointer-events: auto;
 }
 
 #tablet-ui:hover {
@@ -175,8 +171,7 @@ body {
 
 .tablet-screen {
     background: linear-gradient(135deg, #0b0c10, #1a1a24);
-    width: 100%;
-    height: 100%;
+    width: 100%; height: 100%;
     border-radius: 10px;
     border: 1px solid var(--neon-cyan);
     padding: 15px;
@@ -198,8 +193,7 @@ body {
 }
 
 .blink-dot {
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     background-color: #00ffaa;
     border-radius: 50%;
     animation: blink 2s infinite;
@@ -232,12 +226,10 @@ body {
 
 .notification-badge {
     position: absolute;
-    top: -5px;
-    right: 5px;
+    top: -5px; right: 5px;
     background: var(--neon-pink);
     color: white;
-    font-size: 0.7rem;
-    font-weight: bold;
+    font-size: 0.7rem; font-weight: bold;
     width: 18px; height: 18px;
     border-radius: 50%;
     display: flex;
