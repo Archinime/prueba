@@ -11,6 +11,7 @@
 </head>
 <body>
 
+    <!-- Video oculto (ya no se usa) -->
     <video id="weather-video" autoplay loop muted playsinline style="display:none;"></video>
 
     <div id="room-background">
@@ -32,7 +33,7 @@
             field-of-view="60deg">
         </model-viewer>
 
-        <!-- Modelo secundario: cortinas - AJUSTA position, scale, rotation según sea necesario -->
+        <!-- Modelo secundario: cortinas - Si no se ve, ajusta position, scale o rotation -->
         <model-viewer 
             id="cortinas-model" 
             class="bg-model secondary-model" 
@@ -42,9 +43,9 @@
             disable-tap
             disable-pan
             interaction-prompt="none"
-            position="0m 0m 0m"        <!-- Cambia esto para mover las cortinas -->
-            scale="1 1 1"              <!-- Cambia si necesitas redimensionar -->
-            rotation="0deg 0deg 0deg"  <!-- Cambia si necesitas rotar -->
+            scale="1 1 1"
+            position="0m 0m 0m"
+            rotation="0deg 0deg 0deg"
             camera-target="0m 1m 0m"
             camera-orbit="0deg 70deg 2.8m"
             min-camera-orbit="-35deg 70deg 2.8m"
@@ -52,7 +53,7 @@
             field-of-view="60deg">
         </model-viewer>
 
-        <!-- Modelo secundario: piso (normalmente no necesita ajustes) -->
+        <!-- Modelo secundario: piso -->
         <model-viewer 
             id="piso-model" 
             class="bg-model secondary-model" 
@@ -62,8 +63,8 @@
             disable-tap
             disable-pan
             interaction-prompt="none"
-            position="0m 0m 0m"
             scale="1 1 1"
+            position="0m 0m 0m"
             rotation="0deg 0deg 0deg"
             camera-target="0m 1m 0m"
             camera-orbit="0deg 70deg 2.8m"
@@ -72,7 +73,7 @@
             field-of-view="60deg">
         </model-viewer>
 
-        <!-- Modelo de cama - AJUSTA según tamaño y posición -->
+        <!-- Modelo secundario: cama - Ajusta scale y position según tamaño -->
         <model-viewer 
             id="cama-model" 
             class="bg-model secondary-model" 
@@ -82,9 +83,9 @@
             disable-tap
             disable-pan
             interaction-prompt="none"
-            position="0m 0m 0m"        <!-- Mueve la cama aquí -->
-            scale="0.8 0.8 0.8"        <!-- Ejemplo: escala reducida si es muy grande -->
-            rotation="0deg 0deg 0deg"  <!-- Rótala si es necesario -->
+            scale="0.5 0.5 0.5"   <!-- Reduce tamaño si es muy grande -->
+            position="0m 0m 0m"    <!-- Cambia para colocarla en su sitio -->
+            rotation="0deg 0deg 0deg"
             camera-target="0m 1m 0m"
             camera-orbit="0deg 70deg 2.8m"
             min-camera-orbit="-35deg 70deg 2.8m"
@@ -92,7 +93,7 @@
             field-of-view="60deg">
         </model-viewer>
 
-        <!-- Modelo de alfombra - AJUSTA según necesidad -->
+        <!-- Modelo secundario: alfombra -->
         <model-viewer 
             id="alfombra-model" 
             class="bg-model secondary-model" 
@@ -102,8 +103,8 @@
             disable-tap
             disable-pan
             interaction-prompt="none"
-            position="0m 0m 0m"
             scale="1 1 1"
+            position="0m 0m 0m"
             rotation="0deg 0deg 0deg"
             camera-target="0m 1m 0m"
             camera-orbit="0deg 70deg 2.8m"
@@ -112,7 +113,7 @@
             field-of-view="60deg">
         </model-viewer>
 
-        <!-- Modelo climático - Debe colocarse en el exterior o en una ventana -->
+        <!-- Modelo climático (se cambia según el clima) -->
         <model-viewer 
             id="weather-model" 
             class="bg-model secondary-model" 
@@ -122,8 +123,8 @@
             disable-tap
             disable-pan
             interaction-prompt="none"
-            position="0m 0m 0m"        <!-- Colócalo donde corresponda (ej: fuera de la habitación) -->
             scale="1 1 1"
+            position="0m 0m 0m"
             rotation="0deg 0deg 0deg"
             camera-target="0m 1m 0m"
             camera-orbit="0deg 70deg 2.8m"
@@ -134,7 +135,6 @@
     </div>
 
     <main id="room-container">
-
         <div id="character-layer">
             <model-viewer 
                 id="waifu-placeholder" 
@@ -152,7 +152,6 @@
                 <p id="dialogue-text">¡Hola! Bienvenido de nuevo a casa.<br>¿Vemos un anime hoy?</p>
             </div>
         </div>
-
     </main>
 
     <script src="lobby-main.js"></script>

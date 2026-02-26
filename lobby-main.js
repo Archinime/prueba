@@ -30,7 +30,7 @@ let targetTheta = 0;
 let currentTheta = 0;
 const MAX_ANGLE = 28;
 
-// Lista de todos los modelos de fondo (incluyendo los nuevos) para sincronizar cámara
+// Lista de todos los modelos de fondo (incluyendo los nuevos) para sincronizar
 const backgroundModels = [
     roomModel, 
     cortinasModel, 
@@ -40,7 +40,7 @@ const backgroundModels = [
     weatherModel
 ];
 
-// 2. Interacción al hacer clic en la habitación
+// 2. Interacción al hacer clic en la habitación (solo en el modelo principal)
 roomModel.addEventListener('click', () => {
     const frases = [
         "¡Oye, me haces cosquillas!",
@@ -52,7 +52,7 @@ roomModel.addEventListener('click', () => {
     showDialogue(fraseRandom);
 });
 
-// --- CONFIGURACIÓN RESPONSIVA ---
+// --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
 function getSettings() {
     const isMobile = window.innerWidth <= 768;
     return {
@@ -68,10 +68,8 @@ function getSettings() {
 function applySettings() {
     const settings = getSettings();
     
-    // Ajustar escala del personaje
     waifuModel.scale = `${settings.waifuScale} ${settings.waifuScale} ${settings.waifuScale}`;
     
-    // Aplicar configuración de cámara a los modelos de fondo (solo órbita, no posición local)
     backgroundModels.forEach(model => {
         if (settings.isMobile) {
             model.minCameraOrbit = `-35deg 70deg ${settings.roomDistance}`;
@@ -89,7 +87,7 @@ function applySettings() {
     }
 }
 
-// --- ANIMACIÓN DE INDICACIÓN AUTOMÁTICA (móvil) ---
+// --- ANIMACIÓN DE INDICACIÓN AUTOMÁTICA (10 SEGUNDOS, solo en móvil) ---
 function startCustomWiggle() {
     if (window.innerWidth > 768) return;
     const settings = getSettings();
@@ -116,7 +114,6 @@ function startCustomWiggle() {
     wiggleReq = requestAnimationFrame(step);
 }
 
-// Función para aplicar la misma órbita a todos los modelos
 function applyOrbitToAll(thetaDeg, roomPhiDeg, waifuPhiDeg, roomDist, waifuDist) {
     backgroundModels.forEach(model => {
         model.cameraOrbit = `${thetaDeg}deg ${roomPhiDeg}deg ${roomDist}`;
