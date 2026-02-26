@@ -1,183 +1,270 @@
-// 1. Sistema de Diálogos
-let dialogueTimeout;
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-function showDialogue(text) {
-    const box = document.getElementById('dialogue-box');
-    const textElement = document.getElementById('dialogue-text');
-    textElement.innerHTML = text; 
-    box.classList.remove('hidden');
+// --- Elementos DOM ---
+const videoElement = document.getElementById('weather-video');
+const dialogueBox = document.getElementById('dialogue-box');
+const dialogueText = document.getElementById('dialogue-text');
 
-    clearTimeout(dialogueTimeout);
-    dialogueTimeout = setTimeout(() => {
-        box.classList.add('hidden');
-    }, 5000);
+// --- Configuración de la escena Three.js ---
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = null; // transparente para ver el video
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 1.5, 3.5); // posición inicial similar a model-viewer
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true; // para sombras si los modelos las soportan
+container.appendChild(renderer.domElement);
+
+// --- Luces ---
+const ambientLight = new THREE.AmbientLight(0x404060);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+dirLight.position.set(2, 5, 3);
+dirLight.castShadow = true;
+dirLight.receiveShadow = true;
+scene.add(dirLight);
+
+const fillLight = new THREE.PointLight(0x4466ff, 0.5);
+fillLight.position.set(-2, 2, 2);
+scene.add(fillLight);
+
+// --- Controles de cámara (OrbitControls) ---
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableZoom = false; // deshabilitamos zoom como en model-viewer
+controls.enablePan = false;
+controls.maxPolarAngle = Math.PI / 2; // 90 grados
+controls.minPolarAngle = Math.PI / 3; // 60 grados
+controls.target.set(0, 1, 0);
+
+// Restricciones de órbita (simulando lo que tenía model-viewer)
+let isMobile = window.innerWidth <= 768;
+if (isMobile) {
+    controls.minAzimuthAngle = -Math.PI / 5; // -35 grados
+    controls.maxAzimuthAngle = Math.PI / 5;  // 35 grados
+} else {
+    // En PC, fijamos el ángulo horizontal a 0 (sin rotación)
+    controls.minAzimuthAngle = 0;
+    controls.maxAzimuthAngle = 0;
 }
 
-// 2. Interacción al hacer clic en la pantalla (Habitación)
-document.getElementById('room-model').addEventListener('click', () => {
-    const frases = [
-        "¡Oye, me haces cosquillas!",
-        "¿Tienes algo bueno que ver hoy?",
-        "Jeje, gracias por la visita.",
-        "Deberíamos ver un episodio más... solo uno más."
-    ];
-    
-    const fraseRandom = frases[Math.floor(Math.random() * frases.length)];
-    showDialogue(fraseRandom);
+// --- Cargador de modelos ---
+const loader = new GLTFLoader();
+
+// Objeto para guardar los modelos cargados
+const models = {
+    piso: null,
+    paredes: null,
+    cama: null,
+    lunari: null
+};
+
+// Función para cargar un modelo y devolver una promesa
+function loadModel(path, position = [0,0,0], rotation = [0,0,0], scale = 1) {
+    return new Promise((resolve, reject) => {
+        loader.load(
+            path,
+            (gltf) => {
+                const model = gltf.scene;
+                model.position.set(position[0], position[1], position[2]);
+                model.rotation.set(rotation[0], rotation[1], rotation[2]);
+                model.scale.set(scale, scale, scale);
+                model.traverse((node) => {
+                    if (node.isMesh) {
+                        node.castShadow = true;
+                        node.receiveShadow = true;
+                    }
+                });
+                scene.add(model);
+                resolve(model);
+            },
+            undefined,
+            reject
+        );
+    });
+}
+
+// Cargar todos los modelos
+Promise.all([
+    loadModel('piso.glb', [0, 0, 0]),
+    loadModel('paredes.glb', [0, 0, 0]),
+    loadModel('cama.glb', [0, 0, 0]),
+    loadModel('lunari_saluda.glb', [0, 0.8, 0]) // ajusta posición según tu modelo
+]).then(([piso, paredes, cama, lunari]) => {
+    models.piso = piso;
+    models.paredes = paredes;
+    models.cama = cama;
+    models.lunari = lunari;
+
+    // Si el personaje tiene animaciones, reproducirlas
+    if (lunari.animations && lunari.animations.length) {
+        // Aquí puedes usar AnimationMixer si necesitas
+        console.log('El personaje tiene animaciones');
+    }
+
+    // Iniciar animaciones después de cargar
+    startCustomWiggle();
+}).catch(error => {
+    console.error('Error cargando modelos:', error);
 });
 
-// --- VARIABLES Y REFERENCIAS ---
-const roomModel = document.getElementById('room-model');
-const waifuModel = document.getElementById('waifu-placeholder');
-let wiggleReq;
+// --- Variables para el wiggle ---
+let wiggleAnimationId = null;
 let isWiggling = false;
 
-// --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
-function updateCameraSettings() {
-    const isMobile = window.innerWidth <= 768;
-    // En PC a 3.5m, en móviles Hacemos ZOOM IN a la habitación (2.2m) para cortar los bordes delanteros
-    const roomDistance = isMobile ? '2.2m' : '3.5m';
-    
-    // Mantenemos a la chica en buena proporción respecto al zoom
-    const waifuDistance = isMobile ? '3.5m' : '3.5m'; 
-
-    if (isMobile) {
-        roomModel.minCameraOrbit = `-35deg 70deg ${roomDistance}`;
-        roomModel.maxCameraOrbit = `35deg 70deg ${roomDistance}`;
-        if(!isWiggling) roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
-    } else {
-        // En PC bloqueamos completamente la rotación limitando el giro a 0deg
-        roomModel.minCameraOrbit = `0deg 70deg ${roomDistance}`;
-        roomModel.maxCameraOrbit = `0deg 70deg ${roomDistance}`;
-        roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
-    }
-    
-    if(!isWiggling) waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
-}
-
-// --- ANIMACIÓN DE INDICACIÓN (10 SEGUNDOS) ---
 function startCustomWiggle() {
-    if (window.innerWidth > 768) return;
-    const duration = 10000; 
-    const startTime = performance.now();
-    const maxAngle = 28; 
-    
-    const roomDistance = '2.2m'; // Distancia con zoom móvil
-    const waifuDistance = '3.5m'; 
-    
+    if (window.innerWidth > 768 || isWiggling) return;
     isWiggling = true;
-    function step(currentTime) {
-        if (!isWiggling) return; 
-        
-        const elapsed = currentTime - startTime;
-        if (elapsed < duration) {
-            const progress = elapsed / duration;
-            const currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
-            roomModel.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
-            waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`;
-            wiggleReq = requestAnimationFrame(step);
+    const duration = 10000; // 10 segundos
+    const startTime = performance.now();
+    const maxAngle = 0.5; // radianes (~28 grados)
+
+    function animateWiggle(now) {
+        const elapsed = (now - startTime) / 1000; // en segundos
+        if (elapsed < duration / 1000) {
+            const progress = elapsed / (duration / 1000);
+            const angle = Math.sin(progress * Math.PI * 2) * maxAngle;
+            // Rotamos la cámara alrededor del target
+            camera.position.x = Math.sin(angle) * 3.5;
+            camera.position.z = Math.cos(angle) * 3.5;
+            camera.position.y = 1.5; // altura fija
+            controls.target.set(0, 1, 0);
+            controls.update();
+            wiggleAnimationId = requestAnimationFrame(animateWiggle);
         } else {
-            roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
-            waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
+            // Volver a la posición original
+            camera.position.set(0, 1.5, 3.5);
+            controls.target.set(0, 1, 0);
+            controls.update();
             isWiggling = false;
         }
     }
-    
-    wiggleReq = requestAnimationFrame(step);
+    wiggleAnimationId = requestAnimationFrame(animateWiggle);
 }
 
-roomModel.addEventListener('pointerdown', () => {
-    isWiggling = false;
-    cancelAnimationFrame(wiggleReq);
+// Cancelar wiggle al interactuar
+renderer.domElement.addEventListener('pointerdown', () => {
+    if (isWiggling) {
+        cancelAnimationFrame(wiggleAnimationId);
+        isWiggling = false;
+        camera.position.set(0, 1.5, 3.5);
+        controls.target.set(0, 1, 0);
+        controls.update();
+    }
 });
 
-window.addEventListener('resize', updateCameraSettings);
+// --- Sistema de diálogos ---
+let dialogueTimeout;
 
-// 3. Sincronización de Cámaras (Efecto de Inmersión manual del usuario)
-roomModel.addEventListener('camera-change', () => {
-    if (isWiggling) return; 
-    
-    const roomOrbit = roomModel.getCameraOrbit();
-    const isMobile = window.innerWidth <= 768;
-    const waifuDistance = isMobile ? '3.5m' : '3.5m'; 
-    
-    waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${waifuDistance}`;
+function showDialogue(text) {
+    dialogueText.innerHTML = text;
+    dialogueBox.classList.remove('hidden');
+    clearTimeout(dialogueTimeout);
+    dialogueTimeout = setTimeout(() => {
+        dialogueBox.classList.add('hidden');
+    }, 5000);
+}
+
+// Detectar clics en el canvas (sobre la habitación)
+renderer.domElement.addEventListener('click', (event) => {
+    // Evitar clics en la UI
+    if (event.target === renderer.domElement) {
+        const frases = [
+            "¡Oye, me haces cosquillas!",
+            "¿Tienes algo bueno que ver hoy?",
+            "Jeje, gracias por la visita.",
+            "Deberíamos ver un episodio más... solo uno más."
+        ];
+        const fraseRandom = frases[Math.floor(Math.random() * frases.length)];
+        showDialogue(fraseRandom);
+    }
 });
 
-// 5. SISTEMA CLIMÁTICO DINÁMICO (Mejorado con respaldo IP)
+// --- Clima dinámico (igual que antes) ---
 function initDynamicWeather() {
-    const videoElement = document.getElementById('weather-video');
-
-    // Asigna el video dependiendo de TODOS los códigos WMO de Open-Meteo
     function setWeatherVideo(wmoCode) {
-        let videoFile = 'soleado.mp4'; // Por defecto
-        
-        if (wmoCode === 0) { videoFile = 'soleado.mp4'; } // Despejado
-        else if (wmoCode >= 1 && wmoCode <= 3) { videoFile = 'nublado.mp4'; } // Mayormente despejado a nublado
-        else if (wmoCode === 45 || wmoCode === 48) { videoFile = 'neblina.mp4'; } // Niebla y niebla escarchada
-        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) { videoFile = 'lluvioso.mp4'; } // Llovizna y Lluvia
-        else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) { videoFile = 'nevado.mp4'; } // Nieve y granizo
-        else if (wmoCode >= 95 && wmoCode <= 99) { videoFile = 'tormenta.mp4'; } // Tormentas
-        
-        // Evitar que el video se reinicie si ya tiene el source correcto asignado
+        let videoFile = 'soleado.mp4';
+        if (wmoCode === 0) videoFile = 'soleado.mp4';
+        else if (wmoCode >= 1 && wmoCode <= 3) videoFile = 'nublado.mp4';
+        else if (wmoCode === 45 || wmoCode === 48) videoFile = 'neblina.mp4';
+        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) videoFile = 'lluvioso.mp4';
+        else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) videoFile = 'nevado.mp4';
+        else if (wmoCode >= 95 && wmoCode <= 99) videoFile = 'tormenta.mp4';
+
         if (!videoElement.src.endsWith(videoFile)) {
             videoElement.src = videoFile;
         }
     }
 
-    // APLICAMOS CLIMA POR DEFECTO INMEDIATAMENTE
-    setWeatherVideo(0);
+    setWeatherVideo(0); // default
 
-    // Función genérica para consultar Open-Meteo con coordenadas
     async function fetchWeatherByCoords(lat, lon) {
         try {
             const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
             const data = await response.json();
             setWeatherVideo(data.current_weather.weathercode);
         } catch (error) {
-            console.error("Error API Clima, manteniendo el clima por defecto.", error);
+            console.error("Error API Clima", error);
         }
     }
 
-    // Función de respaldo: Obtiene coordenadas por la IP pública del usuario
     async function fetchWeatherByIP() {
         try {
-            console.log("Intentando obtener ubicación por IP...");
-            // Usamos geojs.io que es gratuita y no requiere API Key
             const ipResponse = await fetch('https://get.geojs.io/v1/ip/geo.json');
             const ipData = await ipResponse.json();
-            // Pasamos las coordenadas de la IP a nuestra función del clima
             await fetchWeatherByCoords(ipData.latitude, ipData.longitude);
         } catch (error) {
-            console.error("Error al obtener ubicación por IP, se mantendrá el clima predeterminado.", error);
+            console.error("Error IP", error);
         }
     }
 
-    // Lógica de permisos de ubicación
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                // Si el usuario acepta, usamos su GPS (más preciso)
-                fetchWeatherByCoords(position.coords.latitude, position.coords.longitude);
-            },
-            (error) => {
-                // Si el usuario rechaza o hay error, usamos la IP (Plan B)
-                console.warn("Geolocalización bloqueada/error. Usando respaldo por IP.", error);
-                fetchWeatherByIP();
-            }
+            (position) => fetchWeatherByCoords(position.coords.latitude, position.coords.longitude),
+            fetchWeatherByIP
         );
     } else {
-        // Si el navegador de plano no soporta geolocalización
         fetchWeatherByIP();
     }
 }
 
-// 4. Inicialización al cargar la página
+// --- Responsive: ajustar controles al cambiar tamaño ---
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        controls.minAzimuthAngle = -Math.PI / 5;
+        controls.maxAzimuthAngle = Math.PI / 5;
+    } else {
+        controls.minAzimuthAngle = 0;
+        controls.maxAzimuthAngle = 0;
+        // Forzar cámara al centro
+        camera.position.set(0, 1.5, 3.5);
+        controls.target.set(0, 1, 0);
+        controls.update();
+    }
+});
+
+// --- Bucle de animación ---
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update(); // solo necesario si enableDamping = true, pero lo dejamos por si acaso
+    renderer.render(scene, camera);
+}
+animate();
+
+// --- Inicialización ---
 window.onload = () => {
-    updateCameraSettings(); 
-    startCustomWiggle(); 
-    initDynamicWeather(); // Llama a la API de clima y su respaldo
-    
+    initDynamicWeather();
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");
     }, 1500);

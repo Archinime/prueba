@@ -6,56 +6,33 @@
     <title>Archinime OS - Habitación de Lunari</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
     <link rel="stylesheet" href="lobby-style.css">
 </head>
 <body>
 
     <video id="weather-video" autoplay loop muted playsinline></video>
 
-    <div id="room-background">
-        <model-viewer 
-            id="room-model" 
-            class="bg-model" 
-            src="pared_piso.glb" 
-            shadow-intensity="1" 
-            camera-controls 
-            disable-zoom 
-            disable-tap
-            disable-pan
-            interaction-prompt="none"
-            camera-target="0m 1m 0m"
-            camera-orbit="0deg 70deg 3.5m" 
-            min-camera-orbit="-35deg 70deg 3.5m"
-            max-camera-orbit="35deg 70deg 3.5m"
-            field-of-view="60deg">
-        </model-viewer>
-    </div>
+    <!-- Canvas para Three.js (habitación + personaje) -->
+    <div id="canvas-container"></div>
 
     <main id="room-container">
-
         <div id="character-layer">
-            <model-viewer 
-                id="waifu-placeholder" 
-                src="lunari_saluda.glb" 
-                autoplay 
-                disable-zoom
-                disable-tap
-                disable-pan
-                interaction-prompt="none"
-                shadow-intensity="1"
-                camera-target="0m 0.8m 0m"
-                camera-orbit="0deg 75deg 3.5m">
-            </model-viewer>
-            
             <div id="dialogue-box" class="hidden">
                 <h3 class="char-name">Lunari</h3>
                 <p id="dialogue-text">¡Hola! Bienvenido de nuevo a casa.<br>¿Vemos un anime hoy?</p>
             </div>
         </div>
-
     </main>
 
-    <script src="lobby-main.js"></script>
+    <!-- Librerías Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="lobby-main.js"></script>
 </body>
 </html>

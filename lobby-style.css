@@ -25,43 +25,32 @@ body {
     width: 100vw;
     height: 100vh;
     object-fit: cover;
-    z-index: 0; /* Al fondo del todo */
+    z-index: 0;
 }
 
-/* --- LA HABITACIÓN (Fondo 3D Unificado) --- */
-#room-background {
+/* --- CANVAS DE THREE.JS --- */
+#canvas-container {
     position: fixed;
-    top: 0; left: 0;
+    top: 0;
+    left: 0;
     width: 100vw;
     height: 100vh;
-    background: transparent; /* Transparente para ver el video del clima */
     z-index: 1;
+    pointer-events: auto; /* para capturar clics */
 }
 
-.bg-model {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    outline: none;
-    background-color: transparent;
-}
-
-#room-model {
-    z-index: 2;
-    pointer-events: auto;
-}
-
-/* --- CAPA INTERACTIVA (UI y Personaje) --- */
+/* --- CAPA INTERACTIVA (UI) --- */
 #room-container {
     position: relative;
-    width: 100%; height: 100%;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     z-index: 10;
     pointer-events: none;
 }
 
-/* --- PERSONAJE --- */
+/* --- CAJA DE DIÁLOGO --- */
 #character-layer {
     flex-grow: 1;
     display: flex;
@@ -73,20 +62,6 @@ body {
     padding-bottom: 5vh;
 }
 
-#waifu-placeholder {
-    width: 100%;
-    max-width: 450px;
-    height: 70vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    outline: none;
-    transition: all 0.3s;
-    /* pointer-events en none permite que el arrastre de cámara pase directo a la habitación */
-    pointer-events: none;
-}
-
-/* --- CAJA DE DIÁLOGO --- */
 #dialogue-box {
     position: absolute;
     bottom: 50px;
@@ -129,14 +104,9 @@ body {
 
 /* --- ADAPTACIÓN PARA MÓVILES --- */
 @media (max-width: 768px) {
-    #waifu-placeholder {
-        height: 60vh;
-        max-width: 100%;
-    }
-    
     #dialogue-box {
         width: 90%;
-        bottom: 50px; 
+        bottom: 50px;
         padding: 15px;
     }
     
