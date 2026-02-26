@@ -104,7 +104,7 @@ roomModel.addEventListener('camera-change', () => {
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${waifuDistance}`;
 });
 
-// 5. SISTEMA CLIMÁTICO DINÁMICO (Mejorado para PC)
+// 5. SISTEMA CLIMÁTICO DINÁMICO (Mejorado con respaldo IP)
 function initDynamicWeather() {
     const videoElement = document.getElementById('weather-video');
 
@@ -115,9 +115,9 @@ function initDynamicWeather() {
         if (wmoCode === 0) { videoFile = 'soleado.mp4'; } // Despejado
         else if (wmoCode >= 1 && wmoCode <= 3) { videoFile = 'nublado.mp4'; } // Mayormente despejado a nublado
         else if (wmoCode === 45 || wmoCode === 48) { videoFile = 'neblina.mp4'; } // Niebla y niebla escarchada
-        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) { videoFile = 'lluvioso.mp4'; } // Llovizna y Lluvia (ligera, fuerte, chubascos)
+        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) { videoFile = 'lluvioso.mp4'; } // Llovizna y Lluvia
         else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) { videoFile = 'nevado.mp4'; } // Nieve y granizo
-        else if (wmoCode >= 95 && wmoCode <= 99) { videoFile = 'tormenta.mp4'; } // Tormentas con o sin granizo gruesa
+        else if (wmoCode >= 95 && wmoCode <= 99) { videoFile = 'tormenta.mp4'; } // Tormentas
         
         // Evitar que el video se reinicie si ya tiene el source correcto asignado
         if (!videoElement.src.endsWith(videoFile)) {
@@ -125,27 +125,50 @@ function initDynamicWeather() {
         }
     }
 
-    // APLICAMOS CLIMA POR DEFECTO INMEDIATAMENTE: Esto evita la pantalla en negro en PC
-    // mientras el navegador pregunta por los permisos de ubicación o si los rechaza sin avisar.
+    // APLICAMOS CLIMA POR DEFECTO INMEDIATAMENTE
     setWeatherVideo(0);
 
+    // Función genérica para consultar Open-Meteo con coordenadas
+    async function fetchWeatherByCoords(lat, lon) {
+        try {
+            const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            const data = await response.json();
+            setWeatherVideo(data.current_weather.weathercode);
+        } catch (error) {
+            console.error("Error API Clima, manteniendo el clima por defecto.", error);
+        }
+    }
+
+    // Función de respaldo: Obtiene coordenadas por la IP pública del usuario
+    async function fetchWeatherByIP() {
+        try {
+            console.log("Intentando obtener ubicación por IP...");
+            // Usamos geojs.io que es gratuita y no requiere API Key
+            const ipResponse = await fetch('https://get.geojs.io/v1/ip/geo.json');
+            const ipData = await ipResponse.json();
+            // Pasamos las coordenadas de la IP a nuestra función del clima
+            await fetchWeatherByCoords(ipData.latitude, ipData.longitude);
+        } catch (error) {
+            console.error("Error al obtener ubicación por IP, se mantendrá el clima predeterminado.", error);
+        }
+    }
+
+    // Lógica de permisos de ubicación
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                try {
-                    const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-                    const data = await response.json();
-                    setWeatherVideo(data.current_weather.weathercode);
-                } catch (error) {
-                    console.error("Error API Clima, manteniendo el clima por defecto.", error);
-                }
+            (position) => {
+                // Si el usuario acepta, usamos su GPS (más preciso)
+                fetchWeatherByCoords(position.coords.latitude, position.coords.longitude);
             },
             (error) => {
-                console.error("Geolocalización bloqueada/error, se mantendrá el clima predeterminado.", error);
+                // Si el usuario rechaza o hay error, usamos la IP (Plan B)
+                console.warn("Geolocalización bloqueada/error. Usando respaldo por IP.", error);
+                fetchWeatherByIP();
             }
         );
+    } else {
+        // Si el navegador de plano no soporta geolocalización
+        fetchWeatherByIP();
     }
 }
 
@@ -153,7 +176,7 @@ function initDynamicWeather() {
 window.onload = () => {
     updateCameraSettings(); 
     startCustomWiggle(); 
-    initDynamicWeather(); // Llama a la API de clima y establece el video de fondo seguro
+    initDynamicWeather(); // Llama a la API de clima y su respaldo
     
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");
