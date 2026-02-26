@@ -11,8 +11,7 @@
 </head>
 <body>
 
-    <!-- Contenedor para modelos climáticos -->
-    <div id="weather-model-container"></div>
+    <video id="weather-video" autoplay loop muted playsinline></video>
 
     <div id="room-background">
         <!-- Modelo principal: paredes (con controles y clic) -->
@@ -43,7 +42,7 @@
             disable-tap
             disable-pan
             interaction-prompt="none"
-            camera-target="5m 1m 0m"
+            camera-target="0m 1m 0m"
             camera-orbit="0deg 70deg 2.8m"
             min-camera-orbit="-35deg 70deg 2.8m"
             max-camera-orbit="35deg 70deg 2.8m"
@@ -68,45 +67,10 @@
         </model-viewer>
     </div>
 
-        <!-- Modelo secundario: alfombra -->
-        <model-viewer 
-            id="alfombra-model" 
-            class="bg-model secondary-model" 
-            src="alfombra.glb" 
-            position="0 0 0"
-            shadow-intensity="1" 
-            disable-zoom 
-            disable-tap
-            disable-pan
-            interaction-prompt="none"
-            camera-target="0m 1m 0m"
-            camera-orbit="0deg 70deg 2.8m"
-            min-camera-orbit="-35deg 70deg 2.8m"
-            max-camera-orbit="35deg 70deg 2.8m"
-            field-of-view="60deg">
-        </model-viewer>
-
-        <!-- Modelo secundario: cama -->
-        <model-viewer 
-            id="cama-model" 
-            class="bg-model secondary-model" 
-            src="cama.glb" 
-            position="0 0 0"
-            shadow-intensity="1" 
-            disable-zoom 
-            disable-tap
-            disable-pan
-            interaction-prompt="none"
-            camera-target="0m 1m 0m"
-            camera-orbit="0deg 70deg 2.8m"
-            min-camera-orbit="-35deg 70deg 2.8m"
-            max-camera-orbit="35deg 70deg 2.8m"
-            field-of-view="60deg">
-        </model-viewer>
-
     <main id="room-container">
 
         <div id="character-layer">
+            <!-- ATRIBUTOS ELIMINADOS: position, camera-target, camera-orbit, field-of-view. Todo lo controla JavaScript -->
             <model-viewer 
                 id="waifu-placeholder" 
                 src="lunari_saluda.glb" 

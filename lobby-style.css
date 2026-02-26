@@ -17,25 +17,15 @@ body {
     width: 100vw;
 }
 
-/* --- CONTENEDOR PARA MODELOS CLIMÁTICOS (se ubica detrás de la habitación) --- */
-#weather-model-container {
+/* --- VIDEO DE FONDO CLIMÁTICO --- */
+#weather-video {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
+    object-fit: cover;
     z-index: 0;
-    pointer-events: none;
-}
-
-.weather-model {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    outline: none;
-    background-color: transparent;
 }
 
 /* --- LA HABITACIÓN (Fondo 3D Unificado) --- */
@@ -62,7 +52,7 @@ body {
 }
 
 .secondary-model {
-    pointer-events: none;
+    pointer-events: none; /* Evita que capturen eventos y asegura que solo el principal controle */
 }
 
 /* --- CAPA INTERACTIVA (UI y Personaje) --- */
