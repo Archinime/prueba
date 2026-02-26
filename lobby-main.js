@@ -38,7 +38,7 @@ function updateHUD() {
     document.getElementById('affinity-val').innerText = playerState.affinity;
 }
 
-// NUEVO: Reloj en tiempo real
+// Reloj en tiempo real
 function startClock() {
     const timeDisplay = document.getElementById('current-time');
     function updateTime() {
@@ -106,6 +106,19 @@ document.getElementById('waifu-placeholder').addEventListener('click', () => {
         showDialogue("Estoy muy cansada... dejemos de jugar y descansemos un poco. (Energía insuficiente)");
     }
 });
+
+// 7. NUEVO: SINCRONIZAR CÁMARA DE LA HABITACIÓN
+// Hace que las paredes giren al mismo tiempo que el piso
+const pisoModel = document.getElementById('piso-model');
+const paredesModel = document.getElementById('paredes-model');
+
+if (pisoModel && paredesModel) {
+    pisoModel.addEventListener('camera-change', () => {
+        paredesModel.cameraOrbit = pisoModel.cameraOrbit;
+        paredesModel.cameraTarget = pisoModel.cameraTarget;
+        paredesModel.fieldOfView = pisoModel.fieldOfView;
+    });
+}
 
 // Arrancar el sistema cuando carga la página
 window.onload = loadProgress;
