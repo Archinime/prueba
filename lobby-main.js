@@ -40,9 +40,10 @@ roomModel.addEventListener('click', () => {
 // --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
 function getDistances() {
     const isMobile = window.innerWidth <= 768;
-    // Valores más cercanos para evitar ver bordes
+    // Distancias para la habitación (más cercanas para no ver bordes)
     const roomDistance = isMobile ? '2.2m' : '2.8m';
-    const waifuDistance = roomDistance; // Misma distancia para la chica
+    // Distancia para el personaje (ligeramente mayor para que se vea más atrás)
+    const waifuDistance = isMobile ? '2.7m' : '3.3m';
     return { roomDistance, waifuDistance, isMobile };
 }
 
@@ -109,21 +110,21 @@ roomModel.addEventListener('pointerdown', () => {
 
 window.addEventListener('resize', updateCameraSettings);
 
-// 3. Sincronización de cámaras: cuando el modelo principal se mueve, los otros lo siguen al instante
+// 3. Sincronización de cámaras: copia exacta de la órbita a los secundarios
 roomModel.addEventListener('camera-change', () => {
     if (isWiggling) return;
 
     const roomOrbit = roomModel.getCameraOrbit();
     const { roomDistance, waifuDistance } = getDistances();
 
-    // Copiar la órbita completa (theta, phi) a los modelos secundarios
+    // Sincronizar cortinas y piso con los mismos ángulos y distancia de habitación
     cortinasModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
     pisoModel.cameraOrbit = `${roomOrbit.theta}rad ${roomOrbit.phi}rad ${roomDistance}`;
-    // La waifu mantiene su propia elevación (75deg) pero sigue el giro horizontal
+    // El personaje sigue el ángulo horizontal pero mantiene su elevación y distancia propia
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad 75deg ${waifuDistance}`;
 });
 
-// 4. SISTEMA CLIMÁTICO DINÁMICO (sin cambios)
+// 4. SISTEMA CLIMÁTICO DINÁMICO
 function initDynamicWeather() {
     const videoElement = document.getElementById('weather-video');
 

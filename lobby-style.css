@@ -25,7 +25,7 @@ body {
     width: 100vw;
     height: 100vh;
     object-fit: cover;
-    z-index: 0; /* Al fondo del todo */
+    z-index: 0;
 }
 
 /* --- LA HABITACIÓN (Fondo 3D Unificado) --- */
@@ -34,7 +34,7 @@ body {
     top: 0; left: 0;
     width: 100vw;
     height: 100vh;
-    background: transparent; /* Transparente para ver el video del clima */
+    background: transparent;
     z-index: 1;
 }
 
@@ -48,11 +48,11 @@ body {
 
 #room-model {
     z-index: 2;
-    pointer-events: auto; /* Solo el principal recibe clics */
+    pointer-events: auto;
 }
 
 .secondary-model {
-    pointer-events: none; /* Evita que los modelos secundarios capturen eventos táctiles */
+    pointer-events: none; /* Evita que capturen eventos y asegura que solo el principal controle */
 }
 
 /* --- CAPA INTERACTIVA (UI y Personaje) --- */
