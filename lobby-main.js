@@ -4,10 +4,9 @@ let dialogueTimeout;
 function showDialogue(text) {
     const box = document.getElementById('dialogue-box');
     const textElement = document.getElementById('dialogue-text');
-    textElement.innerHTML = text; // Permite usar <br>
+    textElement.innerHTML = text; 
     box.classList.remove('hidden');
 
-    // Ocultar el diálogo después de 5 segundos
     clearTimeout(dialogueTimeout);
     dialogueTimeout = setTimeout(() => {
         box.classList.add('hidden');
@@ -36,24 +35,25 @@ let isWiggling = false;
 // --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
 function updateCameraSettings() {
     const isMobile = window.innerWidth <= 768;
-    // Si es móvil, la alejamos a 4.8m. Si es PC, mantenemos los 3.5m originales.
-    const distance = isMobile ? '4.8m' : '3.5m'; 
+    
+    // IMPORTANTE: La habitación se mantiene siempre en 3.5m para NO ver los límites/bordes
+    const roomDistance = '3.5m'; 
+    // Alejamos SOLO a la chica en móviles (a 4.6m) para que retroceda en la pantalla
+    const waifuDistance = isMobile ? '4.6m' : '3.5m'; 
 
     if (isMobile) {
-        // En móvil habilitamos el giro libre
-        roomModel.minCameraOrbit = `-35deg 70deg ${distance}`;
-        roomModel.maxCameraOrbit = `35deg 70deg ${distance}`;
-        // Centrarla si no se está ejecutando la animación inicial
-        if(!isWiggling) roomModel.cameraOrbit = `0deg 70deg ${distance}`;
+        roomModel.minCameraOrbit = `-35deg 70deg ${roomDistance}`;
+        roomModel.maxCameraOrbit = `35deg 70deg ${roomDistance}`;
+        if(!isWiggling) roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
     } else {
         // En PC bloqueamos completamente la rotación limitando el giro a 0deg
-        roomModel.minCameraOrbit = `0deg 70deg ${distance}`;
-        roomModel.maxCameraOrbit = `0deg 70deg ${distance}`;
-        roomModel.cameraOrbit = `0deg 70deg ${distance}`;
+        roomModel.minCameraOrbit = `0deg 70deg ${roomDistance}`;
+        roomModel.maxCameraOrbit = `0deg 70deg ${roomDistance}`;
+        roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
     }
     
-    // Ajustar también la waifu a la nueva distancia
-    if(!isWiggling) waifuModel.cameraOrbit = `0deg 75deg ${distance}`;
+    // Ajustar a la waifu empujándola hacia atrás
+    if(!isWiggling) waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
 }
 
 // --- ANIMACIÓN DE INDICACIÓN (10 SEGUNDOS) ---
@@ -62,8 +62,10 @@ function startCustomWiggle() {
     
     const duration = 10000; // 10 segundos exactos
     const startTime = performance.now();
-    const maxAngle = 28; // Rota un poco más (28 grados)
-    const distance = '4.8m'; // Distancia fija para móvil durante animación
+    const maxAngle = 28; 
+    
+    const roomDistance = '3.5m'; 
+    const waifuDistance = '4.6m'; 
     
     isWiggling = true;
 
@@ -73,17 +75,17 @@ function startCustomWiggle() {
         const elapsed = currentTime - startTime;
         if (elapsed < duration) {
             const progress = elapsed / duration;
-            // Movimiento fluido de onda: Centro -> Izquierda -> Derecha -> Centro
+            // Movimiento fluido de onda
             const currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
             
-            roomModel.cameraOrbit = `${currentTheta}deg 70deg ${distance}`;
-            waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${distance}`; // Sincroniza la waifu
+            roomModel.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
+            waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`; 
             
             wiggleReq = requestAnimationFrame(step);
         } else {
-            // Regresa al centro exacto al terminar los 10 segundos
-            roomModel.cameraOrbit = `0deg 70deg ${distance}`;
-            waifuModel.cameraOrbit = `0deg 75deg ${distance}`;
+            // Regresa al centro exacto al terminar
+            roomModel.cameraOrbit = `0deg 70deg ${roomDistance}`;
+            waifuModel.cameraOrbit = `0deg 75deg ${waifuDistance}`;
             isWiggling = false;
         }
     }
@@ -106,10 +108,10 @@ roomModel.addEventListener('camera-change', () => {
     
     const roomOrbit = roomModel.getCameraOrbit();
     const isMobile = window.innerWidth <= 768;
-    const distance = isMobile ? '4.8m' : '3.5m'; // Mantenemos las distancias adaptadas
+    const waifuDistance = isMobile ? '4.6m' : '3.5m'; 
     
-    // Aplicamos el giro a la waifu conservando su distancia
-    waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${distance}`;
+    // Aplicamos el giro a la waifu conservando su propia distancia para no acercarla de golpe
+    waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${waifuDistance}`;
 });
 
 // 4. Inicialización y saludo al cargar la página
