@@ -26,7 +26,6 @@ body {
     z-index: -2;
 }
 
-/* Ventana en la habitación */
 .room-window {
     position: absolute;
     top: 15%; left: 8%;
@@ -38,7 +37,6 @@ body {
     overflow: hidden;
 }
 
-/* Luna en la ventana */
 .moon {
     position: absolute;
     top: 20px; right: 20px;
@@ -48,7 +46,6 @@ body {
     box-shadow: 0 0 20px #fff, 0 0 40px var(--neon-cyan);
 }
 
-/* Rayo de luz de la ventana */
 .light-ray {
     position: absolute;
     top: 15%; left: 8%;
@@ -60,7 +57,6 @@ body {
     z-index: -1;
 }
 
-/* Escritorio (Base de la habitación) */
 .desk {
     position: absolute;
     bottom: 0; left: 0; width: 100%; height: 18vh;
@@ -95,6 +91,13 @@ body {
     gap: 20px;
     font-family: 'Orbitron', sans-serif;
     box-shadow: 0 0 15px rgba(188, 19, 254, 0.3);
+    align-items: center;
+}
+
+.time-box {
+    color: var(--neon-cyan);
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
 }
 
 /* --- PERSONAJE --- */
@@ -110,7 +113,7 @@ body {
 
 #waifu-placeholder {
     width: 100%;
-    height: 75vh; /* Ajustado para que encaje sobre el escritorio */
+    height: 75vh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -120,21 +123,28 @@ body {
 }
 
 #waifu-placeholder:hover {
-    filter: drop-shadow(0 0 20px rgba(188, 19, 254, 0.3));
+    filter: drop-shadow(0 0 25px rgba(188, 19, 254, 0.5));
 }
 
-/* --- CAJA DE DIÁLOGO (Estilo Visual Novel) --- */
+/* --- CAJA DE DIÁLOGO --- */
 #dialogue-box {
     position: absolute;
     bottom: 50px;
     width: 60%;
-    background: rgba(10, 12, 16, 0.9);
+    background: rgba(10, 12, 16, 0.95);
     border: 2px solid var(--neon-cyan);
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
     z-index: 30;
     transition: opacity 0.3s ease, transform 0.3s ease;
+    /* Efecto de respiración suave */
+    animation: pulse-glow 3s infinite alternate;
+}
+
+@keyframes pulse-glow {
+    0% { box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); }
+    100% { box-shadow: 0 0 25px rgba(0, 243, 255, 0.6); }
 }
 
 #dialogue-box.hidden {
@@ -168,11 +178,11 @@ body {
     border: 4px solid #333;
     border-bottom: none;
     border-radius: 20px 20px 0 0;
-    box-shadow: 0 -10px 40px rgba(0,0,0,0.8), inset 0 0 15px rgba(255,255,255,0.1);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.9), inset 0 0 20px rgba(255,255,255,0.05);
     padding: 15px;
     transform: perspective(800px) rotateX(15deg);
     z-index: 20;
-    transition: transform 0.3s;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 #tablet-ui:hover {
@@ -197,6 +207,23 @@ body {
     margin-bottom: 15px;
     border-bottom: 1px solid rgba(0, 243, 255, 0.3);
     padding-bottom: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.blink-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #00ffaa;
+    border-radius: 50%;
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
 }
 
 .apps-grid {
@@ -217,7 +244,7 @@ body {
 
 .app-icon i { font-size: 2rem; }
 .app-icon span { font-size: 0.75rem; text-align: center; font-weight: bold;}
-.app-icon:hover { transform: scale(1.1); }
+.app-icon:hover { transform: scale(1.15); }
 
 .notification-badge {
     position: absolute;

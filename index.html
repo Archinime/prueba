@@ -27,6 +27,11 @@
                 <span id="level">Nivel: 1</span>
                 <span id="affinity">Afinidad: ❤️ <span id="affinity-val">0</span></span>
             </div>
+            
+            <div class="stats-box time-box">
+                <i class="far fa-clock"></i> <span id="current-time">00:00</span>
+            </div>
+
             <div class="stats-box">
                 <span id="coins">🪙 <span id="coins-val">100</span></span>
                 <span id="energy">⚡ <span id="energy-val">100</span>/100</span>
@@ -36,7 +41,7 @@
         <div id="character-layer">
             <model-viewer 
                 id="waifu-placeholder" 
-                src="lunari saludando.glb" 
+                src="lunari_saluda.glb" 
                 camera-controls 
                 autoplay 
                 disable-zoom
@@ -51,7 +56,7 @@
 
         <nav id="tablet-ui">
             <div class="tablet-screen">
-                <div class="tablet-header">Archinime OS</div>
+                <div class="tablet-header">Archinime OS <span class="blink-dot"></span></div>
                 <div class="apps-grid">
                     <div class="app-icon" onclick="window.location.href='catalogo.html'">
                         <i class="fas fa-play-circle" style="color: var(--neon-cyan);"></i>

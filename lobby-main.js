@@ -18,11 +18,12 @@ function loadProgress() {
         saveProgress();
     }
     updateHUD();
+    startClock();
     
-    // Mostrar saludo inicial después de 1 segundo
+    // Mostrar saludo inicial después de 1.5 segundos para dar tiempo a que cargue el modelo
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");
-    }, 1000);
+    }, 1500);
 }
 
 // 3. Guardar progreso
@@ -30,12 +31,27 @@ function saveProgress() {
     localStorage.setItem('archinimeUserData', JSON.stringify(playerState));
 }
 
-// 4. Actualizar la interfaz
+// 4. Actualizar la interfaz (HUD)
 function updateHUD() {
     document.getElementById('coins-val').innerText = playerState.coins;
     document.getElementById('energy-val').innerText = playerState.energy;
     document.getElementById('level').innerText = `Nivel: ${playerState.level}`;
     document.getElementById('affinity-val').innerText = playerState.affinity;
+}
+
+// NUEVO: Reloj en tiempo real
+function startClock() {
+    const timeDisplay = document.getElementById('current-time');
+    
+    function updateTime() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        timeDisplay.innerText = `${hours}:${minutes}`;
+    }
+    
+    updateTime(); // Llamada inicial
+    setInterval(updateTime, 60000); // Actualizar cada minuto
 }
 
 // 5. Sistema de Diálogos
@@ -54,27 +70,36 @@ function showDialogue(text) {
     }, 5000);
 }
 
-// 6. Interacción básica con el personaje (Lunari)
+// 6. Interacción básica y Sistema de Afinidad
 document.getElementById('waifu-placeholder').addEventListener('click', () => {
     if (playerState.energy >= 5) {
         playerState.affinity += 1;
         playerState.energy -= 5;
         
-        // Diálogos aleatorios al tocarla
-        const frases = [
-            "¡Oye, me haces cosquillas!",
-            "¿Tienes algo bueno que ver hoy?",
-            "Jeje, gracias por la visita.",
-            "Deberíamos ver un episodio más... solo uno más."
-        ];
-        const fraseRandom = frases[Math.floor(Math.random() * frases.length)];
-        
-        // Simulación de pequeña recompensa aleatoria
-        if (Math.random() > 0.8) {
-            playerState.coins += 10;
-            showDialogue("¡Mira lo que encontré! 10 monedas para ti.");
+        // Comprobar hitos de afinidad
+        if (playerState.affinity === 10) {
+            playerState.coins += 50;
+            showDialogue("¡Nuestra afinidad subió a 10! Ten este regalo por pasar tiempo conmigo. (+50 🪙)");
+        } else if (playerState.affinity === 50) {
+            playerState.coins += 200;
+            showDialogue("¡Eres mi persona favorita! Gracias por visitarme siempre. (+200 🪙)");
         } else {
-            showDialogue(fraseRandom);
+            // Diálogos regulares
+            const frases = [
+                "¡Oye, me haces cosquillas!",
+                "¿Tienes algo bueno que ver hoy?",
+                "Jeje, gracias por la visita.",
+                "Deberíamos ver un episodio más... solo uno más."
+            ];
+            const fraseRandom = frases[Math.floor(Math.random() * frases.length)];
+            
+            // Recompensa aleatoria pequeña
+            if (Math.random() > 0.85) {
+                playerState.coins += 10;
+                showDialogue("¡Mira debajo de la almohada! 10 monedas para ti.");
+            } else {
+                showDialogue(fraseRandom);
+            }
         }
         
         saveProgress();
