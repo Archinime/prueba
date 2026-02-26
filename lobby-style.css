@@ -17,13 +17,18 @@ body {
     width: 100vw;
 }
 
-/* -------------------------------------------------
-   ANTERIOR: #weather-video ocupaba 100% de la pantalla.
-   AHORA: está dentro de #window-video-mask para que
-   solo se vea en la zona de la ventana (detrás del modelo).
-   ------------------------------------------------- */
+/* --- VIDEO DE FONDO CLIMÁTICO --- */
+#weather-video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: 0; /* Al fondo del todo */
+}
 
-/* contenedor del modelo 3D (igual que antes) */
+/* --- LA HABITACIÓN (Fondo 3D Unificado) --- */
 #room-background {
     position: fixed;
     top: 0; left: 0;
@@ -33,48 +38,6 @@ body {
     z-index: 1;
 }
 
-/* máscara/ventana donde se verá el video:
-   Ajusta right/top/width/height y clip-path hasta que
-   coincida con tu ventana en el modelo 3D. */
-#window-video-mask {
-    position: absolute; /* relativo al #room-background */
-    /* Valores por defecto que funcionan como punto de partida:
-       - right: cuanto más pequeño, más pegado al borde derecho
-       - top: controla qué tan arriba se coloca
-       - width/height: tamaño del rectángulo de video detrás del modelo */
-    right: 10vw;
-    top: 14vh;
-    width: 26vw;
-    height: 38vh;
-    overflow: hidden;
-    z-index: 1; /* detrás del model-viewer (#room-model z-index: 2) */
-    pointer-events: none; /* que no interfiera con interacción */
-    will-change: transform;
-    /* clip-path para mostrar sólo la mitad superior del contenedor:
-       inset(top right bottom left) -> aquí recortamos el 50% inferior.
-       Si quieres otra forma (curva, ventana con esquinas redondeadas),
-       reemplaza clip-path por una forma polygon() o usa mask-image. */
-    clip-path: inset(0 0 50% 0);
-    /* opcional: suavizar bordes para que no sea tan brusco */
-    border-radius: 8px;
-    /* si quieres un borde sutil para localizar la ventana en debug:
-       outline: 1px dashed rgba(255,255,255,0.06); */
-}
-
-/* El video ocupará TODO el contenedor de la máscara */
-#weather-video {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* cubre todo el recuadro de la ventana */
-    display: block;
-    pointer-events: none;
-    transform-origin: center center;
-}
-
-/* --- LA HABITACIÓN (Fondo 3D Unificado) --- */
 .bg-model {
     position: absolute;
     top: 0; left: 0;
@@ -179,15 +142,5 @@ body {
     
     #dialogue-text {
         font-size: 0.95rem;
-    }
-    
-    /* En móviles se puede querer hacer la máscara más grande/centrada:
-       Ajusta estos valores si notas desalineación en pantallas chicas */
-    #window-video-mask {
-        right: 6vw;
-        top: 12vh;
-        width: 34vw;
-        height: 30vh;
-        clip-path: inset(0 0 55% 0);
     }
 }
