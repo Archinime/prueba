@@ -37,9 +37,10 @@ function updateCameraSettings() {
     const isMobile = window.innerWidth <= 768;
     
     // IMPORTANTE: La habitación se mantiene siempre en 3.5m para NO ver los límites/bordes
-    const roomDistance = '3.5m'; 
-    // Alejamos SOLO a la chica en móviles (a 4.6m) para que retroceda en la pantalla
-    const waifuDistance = isMobile ? '4.6m' : '3.5m'; 
+    const roomDistance = '3.5m';
+    
+    // Alejamos SOLO a la chica en móviles (ahora a 5.8m) para que retroceda más en la pantalla
+    const waifuDistance = isMobile ? '5.8m' : '3.5m'; 
 
     if (isMobile) {
         roomModel.minCameraOrbit = `-35deg 70deg ${roomDistance}`;
@@ -64,8 +65,8 @@ function startCustomWiggle() {
     const startTime = performance.now();
     const maxAngle = 28; 
     
-    const roomDistance = '3.5m'; 
-    const waifuDistance = '4.6m'; 
+    const roomDistance = '3.5m';
+    const waifuDistance = '5.8m'; // Actualizado también aquí
     
     isWiggling = true;
 
@@ -77,7 +78,6 @@ function startCustomWiggle() {
             const progress = elapsed / duration;
             // Movimiento fluido de onda
             const currentTheta = Math.sin(progress * Math.PI * 2) * maxAngle;
-            
             roomModel.cameraOrbit = `${currentTheta}deg 70deg ${roomDistance}`;
             waifuModel.cameraOrbit = `${currentTheta}deg 75deg ${waifuDistance}`; 
             
@@ -108,7 +108,7 @@ roomModel.addEventListener('camera-change', () => {
     
     const roomOrbit = roomModel.getCameraOrbit();
     const isMobile = window.innerWidth <= 768;
-    const waifuDistance = isMobile ? '4.6m' : '3.5m'; 
+    const waifuDistance = isMobile ? '5.8m' : '3.5m'; // Actualizado también aquí
     
     // Aplicamos el giro a la waifu conservando su propia distancia para no acercarla de golpe
     waifuModel.cameraOrbit = `${roomOrbit.theta}rad auto ${waifuDistance}`;
@@ -117,7 +117,7 @@ roomModel.addEventListener('camera-change', () => {
 // 4. Inicialización y saludo al cargar la página
 window.onload = () => {
     updateCameraSettings(); // Aplicar el bloqueo en PC y distancias
-    startCustomWiggle();    // Iniciar la animación suave en móviles
+    startCustomWiggle(); // Iniciar la animación suave en móviles
     
     // Mostrar saludo inicial después de 1.5 segundos
     setTimeout(() => {
