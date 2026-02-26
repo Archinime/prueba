@@ -17,25 +17,15 @@ body {
     width: 100vw;
 }
 
-/* --- CONTENEDOR PARA MODELOS CLIMÁTICOS (se ubica detrás de la habitación) --- */
-#weather-model-container {
+/* --- VIDEO DE FONDO CLIMÁTICO --- */
+#weather-video {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: 0; /* Detrás de todo */
-    pointer-events: none; /* Para no bloquear interacción */
-}
-
-.weather-model {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    outline: none;
-    background-color: transparent;
+    object-fit: cover;
+    z-index: 0;
 }
 
 /* --- LA HABITACIÓN (Fondo 3D Unificado) --- */

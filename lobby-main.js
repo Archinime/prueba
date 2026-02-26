@@ -200,97 +200,46 @@ window.addEventListener('resize', () => {
     }
 });
 
-// 4. SISTEMA CLIMÁTICO DINÁMICO CON MODELOS 3D
-let currentWeatherModel = null; // Para mantener referencia al modelo actual
-
-function setWeatherModel(wmoCode) {
-    const container = document.getElementById('weather-model-container');
-    
-    // Mapeo de códigos WMO a nombres de archivos .glb (ejemplos, el usuario los cambiará)
-    let modelFile = 'soleado.glb'; // por defecto
-    
-    // Códigos WMO según Open-Meteo:
-    // 0: Clear sky
-    // 1, 2, 3: Mainly clear, partly cloudy, overcast
-    // 45, 48: Fog and depositing rime fog
-    // 51, 53, 55: Drizzle
-    // 56, 57: Freezing Drizzle
-    // 61, 63, 65: Rain
-    // 66, 67: Freezing Rain
-    // 71, 73, 75: Snow fall
-    // 77: Snow grains
-    // 80, 81, 82: Rain showers
-    // 85, 86: Snow showers
-    // 95: Thunderstorm
-    // 96, 99: Thunderstorm with hail
-    
-    if (wmoCode === 0) {
-        modelFile = 'soleado.glb';
-    } else if (wmoCode >= 1 && wmoCode <= 3) {
-        modelFile = 'nublado.glb';
-    } else if (wmoCode === 45 || wmoCode === 48) {
-        modelFile = 'neblina.glb';
-    } else if ((wmoCode >= 51 && wmoCode <= 55) || (wmoCode >= 80 && wmoCode <= 82)) {
-        modelFile = 'lluvioso.glb';
-    } else if ((wmoCode >= 56 && wmoCode <= 57) || (wmoCode >= 66 && wmoCode <= 67)) {
-        modelFile = 'lluvia_helada.glb';
-    } else if ((wmoCode >= 61 && wmoCode <= 65)) {
-        modelFile = 'lluvia_fuerte.glb';
-    } else if ((wmoCode >= 71 && wmoCode <= 75) || wmoCode === 77 || (wmoCode >= 85 && wmoCode <= 86)) {
-        modelFile = 'nevado.glb';
-    } else if (wmoCode >= 95 && wmoCode <= 99) {
-        modelFile = 'tormenta.glb';
-    }
-    
-    // Si ya hay un modelo cargado y es el mismo, no hacer nada
-    if (currentWeatherModel && currentWeatherModel.src.endsWith(modelFile)) return;
-    
-    // Eliminar el modelo anterior si existe
-    if (currentWeatherModel) {
-        currentWeatherModel.remove();
-        currentWeatherModel = null;
-    }
-    
-    // Crear nuevo modelo-viewer para el clima
-    const weatherModel = document.createElement('model-viewer');
-    weatherModel.classList.add('weather-model');
-    weatherModel.src = modelFile;
-    weatherModel.setAttribute('shadow-intensity', '1');
-    weatherModel.setAttribute('autoplay', '');
-    weatherModel.setAttribute('disable-zoom', '');
-    weatherModel.setAttribute('disable-tap', '');
-    weatherModel.setAttribute('disable-pan', '');
-    weatherModel.setAttribute('interaction-prompt', 'none');
-    weatherModel.setAttribute('camera-target', '0m 0m 0m'); // Ajusta según el modelo
-    weatherModel.setAttribute('camera-orbit', '0deg 0deg 0m'); // Los modelos ya tienen su propia posición
-    weatherModel.setAttribute('field-of-view', '60deg');
-    
-    container.appendChild(weatherModel);
-    currentWeatherModel = weatherModel;
-}
-
-// Función para obtener el clima
-async function fetchWeatherByCoords(lat, lon) {
-    try {
-        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-        const data = await response.json();
-        setWeatherModel(data.current_weather.weathercode);
-    } catch (error) {
-        console.error("Error API Clima", error);
-    }
-}
-
-async function fetchWeatherByIP() {
-    try {
-        const ipResponse = await fetch('https://get.geojs.io/v1/ip/geo.json');
-        const ipData = await ipResponse.json();
-        await fetchWeatherByCoords(ipData.latitude, ipData.longitude);
-    } catch (error) {
-        console.error("Error IP", error);
-    }
-}
-
+// 4. SISTEMA CLIMÁTICO DINÁMICO
 function initDynamicWeather() {
+    const videoElement = document.getElementById('weather-video');
+
+    function setWeatherVideo(wmoCode) {
+        let videoFile = 'soleado.mp4';
+        if (wmoCode === 0) { videoFile = 'soleado.mp4'; }
+        else if (wmoCode >= 1 && wmoCode <= 3) { videoFile = 'nublado.mp4'; }
+        else if (wmoCode === 45 || wmoCode === 48) { videoFile = 'neblina.mp4'; }
+        else if ((wmoCode >= 51 && wmoCode <= 67) || (wmoCode >= 80 && wmoCode <= 82)) { videoFile = 'lluvioso.mp4'; }
+        else if ((wmoCode >= 71 && wmoCode <= 77) || wmoCode === 85 || wmoCode === 86) { videoFile = 'nevado.mp4'; }
+        else if (wmoCode >= 95 && wmoCode <= 99) { videoFile = 'tormenta.mp4'; }
+
+        if (!videoElement.src.endsWith(videoFile)) {
+            videoElement.src = videoFile;
+        }
+    }
+
+    setWeatherVideo(0);
+
+    async function fetchWeatherByCoords(lat, lon) {
+        try {
+            const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+            const data = await response.json();
+            setWeatherVideo(data.current_weather.weathercode);
+        } catch (error) {
+            console.error("Error API Clima", error);
+        }
+    }
+
+    async function fetchWeatherByIP() {
+        try {
+            const ipResponse = await fetch('https://get.geojs.io/v1/ip/geo.json');
+            const ipData = await ipResponse.json();
+            await fetchWeatherByCoords(ipData.latitude, ipData.longitude);
+        } catch (error) {
+            console.error("Error IP", error);
+        }
+    }
+
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => {

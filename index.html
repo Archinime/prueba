@@ -11,8 +11,7 @@
 </head>
 <body>
 
-    <!-- Contenedor para modelos climáticos -->
-    <div id="weather-model-container"></div>
+    <video id="weather-video" autoplay loop muted playsinline></video>
 
     <div id="room-background">
         <!-- Modelo principal: paredes (con controles y clic) -->
@@ -71,6 +70,7 @@
     <main id="room-container">
 
         <div id="character-layer">
+            <!-- ATRIBUTOS ELIMINADOS: position, camera-target, camera-orbit, field-of-view. Todo lo controla JavaScript -->
             <model-viewer 
                 id="waifu-placeholder" 
                 src="lunari_saluda.glb" 
