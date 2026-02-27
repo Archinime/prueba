@@ -247,12 +247,15 @@ function initDynamicWeather() {
     }
 }
 
-// 5. NUEVO: PANEL DE EDICIÓN DE MODELOS
+// 5. EDITOR DE MODELOS MEJORADO
 function initEditPanel() {
     const toggleBtn = document.getElementById('edit-toggle');
     const panel = document.getElementById('edit-panel');
     const closeBtn = document.getElementById('close-panel');
     const modelSelect = document.getElementById('model-select');
+    const disableCameraCheck = document.getElementById('disable-camera');
+
+    // Elementos de entrada
     const posX = document.getElementById('pos-x');
     const posY = document.getElementById('pos-y');
     const posZ = document.getElementById('pos-z');
@@ -262,6 +265,18 @@ function initEditPanel() {
     const scaleX = document.getElementById('scale-x');
     const scaleY = document.getElementById('scale-y');
     const scaleZ = document.getElementById('scale-z');
+
+    // Elementos de visualización de valores
+    const posXVal = document.getElementById('pos-x-val');
+    const posYVal = document.getElementById('pos-y-val');
+    const posZVal = document.getElementById('pos-z-val');
+    const rotXVal = document.getElementById('rot-x-val');
+    const rotYVal = document.getElementById('rot-y-val');
+    const rotZVal = document.getElementById('rot-z-val');
+    const scaleXVal = document.getElementById('scale-x-val');
+    const scaleYVal = document.getElementById('scale-y-val');
+    const scaleZVal = document.getElementById('scale-z-val');
+
     const resetBtn = document.getElementById('reset-transform');
 
     // Modelos disponibles
@@ -272,19 +287,58 @@ function initEditPanel() {
         'waifu-placeholder': waifuModel
     };
 
+    // Estado de camera-controls original
+    let originalCameraControls = {};
+
     // Abrir/cerrar panel
     toggleBtn.addEventListener('click', () => {
         panel.classList.toggle('hidden');
         if (!panel.classList.contains('hidden')) {
             loadCurrentValues();
+            // Guardar estado original de camera-controls y desactivar si está marcado
+            Object.keys(models).forEach(id => {
+                const model = models[id];
+                originalCameraControls[id] = model.cameraControls;
+                if (disableCameraCheck.checked) {
+                    model.cameraControls = false;
+                }
+            });
+        } else {
+            // Restaurar camera-controls al cerrar
+            Object.keys(models).forEach(id => {
+                if (originalCameraControls[id] !== undefined) {
+                    models[id].cameraControls = originalCameraControls[id];
+                }
+            });
         }
     });
 
     closeBtn.addEventListener('click', () => {
         panel.classList.add('hidden');
+        // Restaurar camera-controls
+        Object.keys(models).forEach(id => {
+            if (originalCameraControls[id] !== undefined) {
+                models[id].cameraControls = originalCameraControls[id];
+            }
+        });
     });
 
-    // Cargar valores actuales del modelo seleccionado en los inputs
+    // Cuando se marca/desmarca la casilla, aplicar o revertir
+    disableCameraCheck.addEventListener('change', () => {
+        if (!panel.classList.contains('hidden')) {
+            Object.keys(models).forEach(id => {
+                const model = models[id];
+                if (disableCameraCheck.checked) {
+                    originalCameraControls[id] = model.cameraControls;
+                    model.cameraControls = false;
+                } else {
+                    model.cameraControls = originalCameraControls[id] || false;
+                }
+            });
+        }
+    });
+
+    // Cargar valores actuales del modelo seleccionado
     function loadCurrentValues() {
         const selectedId = modelSelect.value;
         const model = models[selectedId];
@@ -295,7 +349,6 @@ function initEditPanel() {
         const rot = model.getAttribute('rotation') || '0deg 0deg 0deg';
         const scale = model.getAttribute('scale') || '1 1 1';
 
-        // Parsear valores
         const posParts = pos.split(' ').map(p => parseFloat(p.replace('m', '')));
         const rotParts = rot.split(' ').map(r => parseFloat(r.replace('deg', '')));
         const scaleParts = scale.split(' ').map(s => parseFloat(s));
@@ -311,15 +364,29 @@ function initEditPanel() {
         scaleX.value = scaleParts[0] || 1;
         scaleY.value = scaleParts[1] || 1;
         scaleZ.value = scaleParts[2] || 1;
+
+        updateValueDisplays();
     }
 
-    // Aplicar cambios al modelo actual
+    // Actualizar los textos que muestran los valores
+    function updateValueDisplays() {
+        posXVal.textContent = parseFloat(posX.value).toFixed(2);
+        posYVal.textContent = parseFloat(posY.value).toFixed(2);
+        posZVal.textContent = parseFloat(posZ.value).toFixed(2);
+        rotXVal.textContent = parseFloat(rotX.value).toFixed(1);
+        rotYVal.textContent = parseFloat(rotY.value).toFixed(1);
+        rotZVal.textContent = parseFloat(rotZ.value).toFixed(1);
+        scaleXVal.textContent = parseFloat(scaleX.value).toFixed(2);
+        scaleYVal.textContent = parseFloat(scaleY.value).toFixed(2);
+        scaleZVal.textContent = parseFloat(scaleZ.value).toFixed(2);
+    }
+
+    // Aplicar transformación al modelo actual
     function applyTransform() {
         const selectedId = modelSelect.value;
         const model = models[selectedId];
         if (!model) return;
 
-        // Construir strings
         const posStr = `${posX.value}m ${posY.value}m ${posZ.value}m`;
         const rotStr = `${rotX.value}deg ${rotY.value}deg ${rotZ.value}deg`;
         const scaleStr = `${scaleX.value} ${scaleY.value} ${scaleZ.value}`;
@@ -327,11 +394,35 @@ function initEditPanel() {
         model.setAttribute('position', posStr);
         model.setAttribute('rotation', rotStr);
         model.setAttribute('scale', scaleStr);
+
+        updateValueDisplays();
     }
 
-    // Event listeners para inputs
+    // Event listeners para sliders
     [posX, posY, posZ, rotX, rotY, rotZ, scaleX, scaleY, scaleZ].forEach(input => {
         input.addEventListener('input', applyTransform);
+    });
+
+    // Botones de paso (incremento/decremento)
+    document.querySelectorAll('.step-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const axis = btn.dataset.axis; // 'pos', 'rot', 'scale'
+            const coord = btn.dataset.coord; // 'x', 'y', 'z'
+            const dir = parseFloat(btn.dataset.dir); // paso negativo o positivo
+
+            let input;
+            if (axis === 'pos') {
+                input = document.getElementById(`pos-${coord}`);
+            } else if (axis === 'rot') {
+                input = document.getElementById(`rot-${coord}`);
+            } else if (axis === 'scale') {
+                input = document.getElementById(`scale-${coord}`);
+            }
+            if (input) {
+                input.value = parseFloat(input.value) + dir;
+                applyTransform();
+            }
+        });
     });
 
     // Cambio de modelo
@@ -351,7 +442,7 @@ function initEditPanel() {
         applyTransform();
     });
 
-    // Cargar valores iniciales al abrir por primera vez
+    // Cargar valores iniciales
     loadCurrentValues();
 }
 
@@ -363,7 +454,7 @@ window.onload = () => {
         startCustomWiggle();
     }
     initDynamicWeather();
-    initEditPanel(); // Nuevo panel
+    initEditPanel();
 
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");

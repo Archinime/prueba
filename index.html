@@ -14,7 +14,7 @@
     <video id="weather-video" autoplay loop muted playsinline></video>
 
     <div id="room-background">
-        <!-- Modelo principal: paredes (con controles y clic) -->
+        <!-- Modelo principal: paredes -->
         <model-viewer 
             id="room-model" 
             class="bg-model main-model" 
@@ -35,7 +35,7 @@
             scale="1 1 1">
         </model-viewer>
 
-        <!-- Modelo secundario: cortinas (sin controles, se sincroniza) -->
+        <!-- Modelo secundario: cortinas -->
         <model-viewer 
             id="cortinas-model" 
             class="bg-model secondary-model" 
@@ -55,7 +55,7 @@
             scale="1 1 1">
         </model-viewer>
 
-        <!-- Modelo secundario: piso (sin controles, se sincroniza) -->
+        <!-- Modelo secundario: piso -->
         <model-viewer 
             id="piso-model" 
             class="bg-model secondary-model" 
@@ -105,7 +105,7 @@
             <i class="fas fa-sliders-h"></i>
         </button>
 
-        <!-- Panel de edición de modelos -->
+        <!-- Panel de edición mejorado -->
         <div id="edit-panel" class="edit-panel hidden">
             <div class="edit-panel-header">
                 <h3><i class="fas fa-cube"></i> Editor de Modelos</h3>
@@ -120,36 +120,110 @@
                     <option value="waifu-placeholder">Personaje</option>
                 </select>
 
+                <!-- Checkbox para desactivar camera-controls mientras se edita -->
+                <div style="margin: 10px 0;">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="disable-camera" checked>
+                        <span style="color: var(--neon-cyan);">Desactivar controles de cámara al editar</span>
+                    </label>
+                </div>
+
                 <div class="transform-section">
                     <h4>Posición (metros)</h4>
-                    <div class="coord-inputs">
-                        <label>X <input type="number" id="pos-x" step="0.01" value="0"></label>
-                        <label>Y <input type="number" id="pos-y" step="0.01" value="0"></label>
-                        <label>Z <input type="number" id="pos-z" step="0.01" value="0"></label>
+                    <div class="coord-sliders">
+                        <div class="slider-group">
+                            <label>X <span id="pos-x-val">0.00</span></label>
+                            <input type="range" id="pos-x" min="-5" max="5" step="0.01" value="0">
+                            <div class="step-buttons">
+                                <button class="step-btn" data-axis="pos" data-coord="x" data-dir="-1">-</button>
+                                <button class="step-btn" data-axis="pos" data-coord="x" data-dir="1">+</button>
+                            </div>
+                        </div>
+                        <div class="slider-group">
+                            <label>Y <span id="pos-y-val">0.00</span></label>
+                            <input type="range" id="pos-y" min="-5" max="5" step="0.01" value="0">
+                            <div class="step-buttons">
+                                <button class="step-btn" data-axis="pos" data-coord="y" data-dir="-1">-</button>
+                                <button class="step-btn" data-axis="pos" data-coord="y" data-dir="1">+</button>
+                            </div>
+                        </div>
+                        <div class="slider-group">
+                            <label>Z <span id="pos-z-val">0.00</span></label>
+                            <input type="range" id="pos-z" min="-5" max="5" step="0.01" value="0">
+                            <div class="step-buttons">
+                                <button class="step-btn" data-axis="pos" data-coord="z" data-dir="-1">-</button>
+                                <button class="step-btn" data-axis="pos" data-coord="z" data-dir="1">+</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="transform-section">
                     <h4>Rotación (grados)</h4>
-                    <div class="coord-inputs">
-                        <label>X <input type="number" id="rot-x" step="0.1" value="0"></label>
-                        <label>Y <input type="number" id="rot-y" step="0.1" value="0"></label>
-                        <label>Z <input type="number" id="rot-z" step="0.1" value="0"></label>
+                    <div class="coord-sliders">
+                        <div class="slider-group">
+                            <label>X <span id="rot-x-val">0.0</span></label>
+                            <input type="range" id="rot-x" min="-180" max="180" step="0.1" value="0">
+                            <div class="step-buttons">
+                                <button class="step-btn" data-axis="rot" data-coord="x" data-dir="-1">-</button>
+                                <button class="step-btn" data-axis="rot" data-coord="x" data-dir="1">+</button>
+                            </div>
+                        </div>
+                        <div class="slider-group">
+                            <label>Y <span id="rot-y-val">0.0</span></label>
+                            <input type="range" id="rot-y" min="-180" max="180" step="0.1" value="0">
+                            <div class="step-buttons">
+                                <button class="step-btn" data-axis="rot" data-coord="y" data-dir="-1">-</button>
+                                <button class="step-btn" data-axis="rot" data-coord="y" data-dir="1">+</button>
+                            </div>
+                        </div>
+                        <div class="slider-group">
+                            <label>Z <span id="rot-z-val">0.0</span></label>
+                            <input type="range" id="rot-z" min="-180" max="180" step="0.1" value="0">
+                            <div class="step-buttons">
+                                <button class="step-btn" data-axis="rot" data-coord="z" data-dir="-1">-</button>
+                                <button class="step-btn" data-axis="rot" data-coord="z" data-dir="1">+</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="transform-section">
                     <h4>Escala</h4>
-                    <div class="coord-inputs">
-                        <label>X <input type="number" id="scale-x" step="0.01" min="0" value="1"></label>
-                        <label>Y <input type="number" id="scale-y" step="0.01" min="0" value="1"></label>
-                        <label>Z <input type="number" id="scale-z" step="0.01" min="0" value="1"></label>
+                    <div class="coord-sliders">
+                        <div class="slider-group">
+                            <label>X <span id="scale-x-val">1.00</span></label>
+                            <input type="range" id="scale-x" min="0.1" max="3" step="0.01" value="1">
+                            <div class="step-buttons">
+                                <button class="step-btn" data-axis="scale" data-coord="x" data-dir="-0.1">-</button>
+                                <button class="step-btn" data-axis="scale" data-coord="x" data-dir="0.1">+</button>
+                            </div>
+                        </div>
+                        <div class="slider-group">
+                            <label>Y <span id="scale-y-val">1.00</span></label>
+                            <input type="range" id="scale-y" min="0.1" max="3" step="0.01" value="1">
+                            <div class="step-buttons">
+                                <button class="step-btn" data-axis="scale" data-coord="y" data-dir="-0.1">-</button>
+                                <button class="step-btn" data-axis="scale" data-coord="y" data-dir="0.1">+</button>
+                            </div>
+                        </div>
+                        <div class="slider-group">
+                            <label>Z <span id="scale-z-val">1.00</span></label>
+                            <input type="range" id="scale-z" min="0.1" max="3" step="0.01" value="1">
+                            <div class="step-buttons">
+                                <button class="step-btn" data-axis="scale" data-coord="z" data-dir="-0.1">-</button>
+                                <button class="step-btn" data-axis="scale" data-coord="z" data-dir="0.1">+</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="edit-panel-actions">
                     <button id="reset-transform" class="reset-btn">Restablecer</button>
                 </div>
+                <p style="font-size:0.8rem; color:#aaa; text-align:center; margin-top:10px;">
+                    Los cambios se aplican en tiempo real
+                </p>
             </div>
         </div>
 

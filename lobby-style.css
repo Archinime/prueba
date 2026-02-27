@@ -1,176 +1,73 @@
-/* --- BOTÓN Y PANEL DE EDICIÓN --- */
-.edit-toggle-btn {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background: var(--neon-purple);
-    border: 2px solid var(--neon-cyan);
-    color: white;
-    font-size: 24px;
-    cursor: pointer;
-    box-shadow: 0 0 20px rgba(188, 19, 254, 0.5);
-    z-index: 100;
-    transition: all 0.3s ease;
+/* --- ESTILOS PARA LOS NUEVOS CONTROLES DEL EDITOR --- */
+.coord-sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.slider-group {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
-.edit-toggle-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 30px rgba(0, 243, 255, 0.8);
-}
-
-.edit-panel {
-    position: fixed;
-    bottom: 100px;
-    right: 20px;
-    width: 300px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border: 2px solid var(--neon-cyan);
-    border-radius: 15px;
-    padding: 20px;
+.slider-group label {
+    min-width: 40px;
     color: white;
-    font-family: 'Poppins', sans-serif;
-    box-shadow: 0 0 30px rgba(0, 243, 255, 0.3);
-    z-index: 101;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.edit-panel.hidden {
-    opacity: 0;
-    transform: translateY(20px);
-    pointer-events: none;
-}
-
-.edit-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    border-bottom: 1px solid var(--neon-pink);
-    padding-bottom: 10px;
-}
-
-.edit-panel-header h3 {
-    font-family: 'Orbitron', sans-serif;
-    color: var(--neon-cyan);
-    font-size: 1.2rem;
-    margin: 0;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    color: var(--neon-pink);
-    font-size: 1.2rem;
-    cursor: pointer;
-}
-
-.close-btn:hover {
-    color: white;
-}
-
-.edit-panel-content label {
-    display: block;
-    margin-top: 10px;
-    color: var(--neon-cyan);
     font-size: 0.9rem;
 }
 
-#model-select {
-    width: 100%;
-    padding: 8px;
+.slider-group label span {
+    color: var(--neon-cyan);
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.slider-group input[type=range] {
+    flex: 1;
+    min-width: 150px;
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    -webkit-appearance: none;
+}
+
+.slider-group input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--neon-cyan);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--neon-cyan);
+}
+
+.step-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.step-btn {
     background: #1a1a2e;
     border: 1px solid var(--neon-purple);
     color: white;
-    border-radius: 5px;
-    margin-bottom: 15px;
-    font-family: 'Poppins', sans-serif;
-}
-
-.transform-section {
-    margin-bottom: 20px;
-}
-
-.transform-section h4 {
-    color: var(--neon-pink);
-    font-size: 1rem;
-    margin-bottom: 10px;
-    border-left: 3px solid var(--neon-cyan);
-    padding-left: 8px;
-}
-
-.coord-inputs {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-}
-
-.coord-inputs label {
-    display: flex;
-    flex-direction: column;
-    font-size: 0.8rem;
-    color: #aaa;
-    margin: 0;
-}
-
-.coord-inputs input {
-    background: #0a0c10;
-    border: 1px solid #333;
-    color: white;
-    padding: 6px;
+    width: 28px;
+    height: 28px;
     border-radius: 4px;
-    font-size: 0.9rem;
-    width: 100%;
-}
-
-.coord-inputs input:focus {
-    border-color: var(--neon-cyan);
-    outline: none;
-}
-
-.edit-panel-actions {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-.reset-btn {
-    background: transparent;
-    border: 1px solid var(--neon-pink);
-    color: var(--neon-pink);
-    padding: 8px 20px;
-    border-radius: 20px;
     cursor: pointer;
-    font-family: 'Orbitron', sans-serif;
-    transition: all 0.3s;
+    font-weight: bold;
+    transition: all 0.2s;
 }
 
-.reset-btn:hover {
-    background: var(--neon-pink);
-    color: black;
-    box-shadow: 0 0 15px var(--neon-pink);
+.step-btn:hover {
+    background: var(--neon-purple);
+    border-color: var(--neon-cyan);
 }
 
-/* Ajustes para móvil */
-@media (max-width: 768px) {
-    .edit-panel {
-        width: 90%;
-        left: 5%;
-        right: auto;
-        bottom: 80px;
-    }
-    
-    .edit-toggle-btn {
-        width: 50px;
-        height: 50px;
-        font-size: 20px;
-        bottom: 15px;
-        right: 15px;
-    }
+/* Checkbox personalizado */
+#disable-camera {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--neon-cyan);
 }
