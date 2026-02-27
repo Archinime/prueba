@@ -14,7 +14,7 @@ function showDialogue(text) {
 }
 
 // --- REFERENCIAS A LOS MODELOS ---
-const roomModel = document.getElementById('room-model');
+const roomModel = document.getElementById('room-model');       // principal (paredes)
 const cortinasModel = document.getElementById('cortinas-model');
 const pisoModel = document.getElementById('piso-model');
 const waifuModel = document.getElementById('waifu-placeholder');
@@ -25,11 +25,12 @@ let touchAnimReq;
 let isTouching = false;
 let targetTheta = 0;
 let currentTheta = 0;
-const MAX_ANGLE = 28;
+const MAX_ANGLE = 28; // grados máximo de giro
 
+// Lista de todos los modelos de fondo para sincronizar
 const backgroundModels = [roomModel, cortinasModel, pisoModel];
 
-// 2. Interacción al hacer clic en la habitación
+// 2. Interacción al hacer clic en la habitación (solo en el modelo principal)
 roomModel.addEventListener('click', () => {
     const frases = [
         "¡Oye, me haces cosquillas!",
@@ -41,24 +42,26 @@ roomModel.addEventListener('click', () => {
     showDialogue(fraseRandom);
 });
 
-// --- CONFIGURACIÓN RESPONSIVA ---
+// --- CONFIGURACIÓN RESPONSIVA (PC vs Móvil) ---
 function getSettings() {
     const isMobile = window.innerWidth <= 768;
     return {
         isMobile,
         roomDistance: isMobile ? '2.2m' : '2.8m',
-        waifuDistance: isMobile ? '6.0m' : '5.5m',
-        waifuScale: isMobile ? 0.7 : 0.8,
-        waifuTargetY: '0.7m',
-        waifuPhi: 60
+        waifuDistance: isMobile ? '6.0m' : '5.5m', // Móvil más lejos
+        waifuScale: isMobile ? 0.7 : 0.8,          // Móvil más pequeño
+        waifuTargetY: '0.7m',                       // Punto de mira constante
+        waifuPhi: 60                                 // Ángulo vertical
     };
 }
 
 function applySettings() {
     const settings = getSettings();
     
+    // Ajustar escala del personaje (relativo a su modelo original)
     waifuModel.scale = `${settings.waifuScale} ${settings.waifuScale} ${settings.waifuScale}`;
     
+    // Aplicar a todos los modelos de fondo
     backgroundModels.forEach(model => {
         if (settings.isMobile) {
             model.minCameraOrbit = `-35deg 70deg ${settings.roomDistance}`;
@@ -76,7 +79,7 @@ function applySettings() {
     }
 }
 
-// --- ANIMACIÓN DE INDICACIÓN AUTOMÁTICA (solo móvil) ---
+// --- ANIMACIÓN DE INDICACIÓN AUTOMÁTICA (10 SEGUNDOS, solo en móvil) ---
 function startCustomWiggle() {
     if (window.innerWidth > 768) return;
     const settings = getSettings();
@@ -103,6 +106,13 @@ function startCustomWiggle() {
     wiggleReq = requestAnimationFrame(step);
 }
 
+// Función para aplicar la misma órbita a todos los modelos
+// Los parámetros:
+//   thetaDeg: rotación horizontal en grados
+//   roomPhiDeg: ángulo vertical para los fondos
+//   waifuPhiDeg: ángulo vertical para el personaje
+//   roomDist: distancia de la cámara a los fondos
+//   waifuDist: distancia de la cámara al personaje
 function applyOrbitToAll(thetaDeg, roomPhiDeg, waifuPhiDeg, roomDist, waifuDist) {
     backgroundModels.forEach(model => {
         model.cameraOrbit = `${thetaDeg}deg ${roomPhiDeg}deg ${roomDist}`;
@@ -110,17 +120,19 @@ function applyOrbitToAll(thetaDeg, roomPhiDeg, waifuPhiDeg, roomDist, waifuDist)
     waifuModel.cameraOrbit = `${thetaDeg}deg ${waifuPhiDeg}deg ${waifuDist}`;
 }
 
-// --- SISTEMA TÁCTIL PARA MÓVILES ---
+// --- SISTEMA TÁCTIL PARA MÓVILES (deslizamiento libre sin retorno) ---
 function initTouchControls() {
     if (window.innerWidth > 768) {
+        // En PC, habilitamos camera-controls normal
         roomModel.cameraControls = true;
         return;
     }
 
+    // En móvil, desactivamos camera-controls para evitar arrastre libre
     roomModel.cameraControls = false;
 
     let touchStartX = 0;
-    const sensitivity = 0.5;
+    const sensitivity = 0.5; // sensibilidad del deslizamiento
 
     roomModel.addEventListener('touchstart', (e) => {
         if (isWiggling) {
@@ -146,6 +158,7 @@ function initTouchControls() {
     roomModel.addEventListener('touchend', () => {
         if (!isTouching) return;
         isTouching = false;
+        // No regresamos a 0
     });
 
     roomModel.addEventListener('touchcancel', () => {
@@ -175,7 +188,7 @@ function startTouchAnimation() {
 
 // Sincronización para PC
 roomModel.addEventListener('camera-change', () => {
-    if (window.innerWidth <= 768) return;
+    if (window.innerWidth <= 768) return; // en móvil no usamos este evento
     if (isWiggling) return;
 
     const roomOrbit = roomModel.getCameraOrbit();
@@ -247,206 +260,7 @@ function initDynamicWeather() {
     }
 }
 
-// 5. EDITOR DE MODELOS MEJORADO
-function initEditPanel() {
-    const toggleBtn = document.getElementById('edit-toggle');
-    const panel = document.getElementById('edit-panel');
-    const closeBtn = document.getElementById('close-panel');
-    const modelSelect = document.getElementById('model-select');
-    const disableCameraCheck = document.getElementById('disable-camera');
-
-    // Elementos de entrada
-    const posX = document.getElementById('pos-x');
-    const posY = document.getElementById('pos-y');
-    const posZ = document.getElementById('pos-z');
-    const rotX = document.getElementById('rot-x');
-    const rotY = document.getElementById('rot-y');
-    const rotZ = document.getElementById('rot-z');
-    const scaleX = document.getElementById('scale-x');
-    const scaleY = document.getElementById('scale-y');
-    const scaleZ = document.getElementById('scale-z');
-
-    // Elementos de visualización de valores
-    const posXVal = document.getElementById('pos-x-val');
-    const posYVal = document.getElementById('pos-y-val');
-    const posZVal = document.getElementById('pos-z-val');
-    const rotXVal = document.getElementById('rot-x-val');
-    const rotYVal = document.getElementById('rot-y-val');
-    const rotZVal = document.getElementById('rot-z-val');
-    const scaleXVal = document.getElementById('scale-x-val');
-    const scaleYVal = document.getElementById('scale-y-val');
-    const scaleZVal = document.getElementById('scale-z-val');
-
-    const resetBtn = document.getElementById('reset-transform');
-
-    // Modelos disponibles
-    const models = {
-        'room-model': roomModel,
-        'cortinas-model': cortinasModel,
-        'piso-model': pisoModel,
-        'waifu-placeholder': waifuModel
-    };
-
-    // Estado de camera-controls original
-    let originalCameraControls = {};
-
-    // Abrir/cerrar panel
-    toggleBtn.addEventListener('click', () => {
-        panel.classList.toggle('hidden');
-        if (!panel.classList.contains('hidden')) {
-            loadCurrentValues();
-            // Guardar estado original de camera-controls y desactivar si está marcado
-            Object.keys(models).forEach(id => {
-                const model = models[id];
-                originalCameraControls[id] = model.cameraControls;
-                if (disableCameraCheck.checked) {
-                    model.cameraControls = false;
-                }
-            });
-        } else {
-            // Restaurar camera-controls al cerrar
-            Object.keys(models).forEach(id => {
-                if (originalCameraControls[id] !== undefined) {
-                    models[id].cameraControls = originalCameraControls[id];
-                }
-            });
-        }
-    });
-
-    closeBtn.addEventListener('click', () => {
-        panel.classList.add('hidden');
-        // Restaurar camera-controls
-        Object.keys(models).forEach(id => {
-            if (originalCameraControls[id] !== undefined) {
-                models[id].cameraControls = originalCameraControls[id];
-            }
-        });
-    });
-
-    // Cuando se marca/desmarca la casilla, aplicar o revertir
-    disableCameraCheck.addEventListener('change', () => {
-        if (!panel.classList.contains('hidden')) {
-            Object.keys(models).forEach(id => {
-                const model = models[id];
-                if (disableCameraCheck.checked) {
-                    originalCameraControls[id] = model.cameraControls;
-                    model.cameraControls = false;
-                } else {
-                    model.cameraControls = originalCameraControls[id] || false;
-                }
-            });
-        }
-    });
-
-    // Cargar valores actuales del modelo seleccionado
-    function loadCurrentValues() {
-        const selectedId = modelSelect.value;
-        const model = models[selectedId];
-        if (!model) return;
-
-        // Leer atributos (o propiedades) actuales
-        const pos = model.getAttribute('position') || '0m 0m 0m';
-        const rot = model.getAttribute('rotation') || '0deg 0deg 0deg';
-        const scale = model.getAttribute('scale') || '1 1 1';
-
-        const posParts = pos.split(' ').map(p => parseFloat(p.replace('m', '')));
-        const rotParts = rot.split(' ').map(r => parseFloat(r.replace('deg', '')));
-        const scaleParts = scale.split(' ').map(s => parseFloat(s));
-
-        posX.value = posParts[0] || 0;
-        posY.value = posParts[1] || 0;
-        posZ.value = posParts[2] || 0;
-
-        rotX.value = rotParts[0] || 0;
-        rotY.value = rotParts[1] || 0;
-        rotZ.value = rotParts[2] || 0;
-
-        scaleX.value = scaleParts[0] || 1;
-        scaleY.value = scaleParts[1] || 1;
-        scaleZ.value = scaleParts[2] || 1;
-
-        updateValueDisplays();
-    }
-
-    // Actualizar los textos que muestran los valores
-    function updateValueDisplays() {
-        posXVal.textContent = parseFloat(posX.value).toFixed(2);
-        posYVal.textContent = parseFloat(posY.value).toFixed(2);
-        posZVal.textContent = parseFloat(posZ.value).toFixed(2);
-        rotXVal.textContent = parseFloat(rotX.value).toFixed(1);
-        rotYVal.textContent = parseFloat(rotY.value).toFixed(1);
-        rotZVal.textContent = parseFloat(rotZ.value).toFixed(1);
-        scaleXVal.textContent = parseFloat(scaleX.value).toFixed(2);
-        scaleYVal.textContent = parseFloat(scaleY.value).toFixed(2);
-        scaleZVal.textContent = parseFloat(scaleZ.value).toFixed(2);
-    }
-
-    // Aplicar transformación al modelo actual
-    function applyTransform() {
-        const selectedId = modelSelect.value;
-        const model = models[selectedId];
-        if (!model) return;
-
-        const posStr = `${posX.value}m ${posY.value}m ${posZ.value}m`;
-        const rotStr = `${rotX.value}deg ${rotY.value}deg ${rotZ.value}deg`;
-        const scaleStr = `${scaleX.value} ${scaleY.value} ${scaleZ.value}`;
-
-        model.setAttribute('position', posStr);
-        model.setAttribute('rotation', rotStr);
-        model.setAttribute('scale', scaleStr);
-
-        updateValueDisplays();
-    }
-
-    // Event listeners para sliders
-    [posX, posY, posZ, rotX, rotY, rotZ, scaleX, scaleY, scaleZ].forEach(input => {
-        input.addEventListener('input', applyTransform);
-    });
-
-    // Botones de paso (incremento/decremento)
-    document.querySelectorAll('.step-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const axis = btn.dataset.axis; // 'pos', 'rot', 'scale'
-            const coord = btn.dataset.coord; // 'x', 'y', 'z'
-            const dir = parseFloat(btn.dataset.dir); // paso negativo o positivo
-
-            let input;
-            if (axis === 'pos') {
-                input = document.getElementById(`pos-${coord}`);
-            } else if (axis === 'rot') {
-                input = document.getElementById(`rot-${coord}`);
-            } else if (axis === 'scale') {
-                input = document.getElementById(`scale-${coord}`);
-            }
-            if (input) {
-                input.value = parseFloat(input.value) + dir;
-                applyTransform();
-            }
-        });
-    });
-
-    // Cambio de modelo
-    modelSelect.addEventListener('change', loadCurrentValues);
-
-    // Botón reset
-    resetBtn.addEventListener('click', () => {
-        posX.value = 0;
-        posY.value = 0;
-        posZ.value = 0;
-        rotX.value = 0;
-        rotY.value = 0;
-        rotZ.value = 0;
-        scaleX.value = 1;
-        scaleY.value = 1;
-        scaleZ.value = 1;
-        applyTransform();
-    });
-
-    // Cargar valores iniciales
-    loadCurrentValues();
-}
-
-// 6. Inicialización
+// 5. Inicialización
 window.onload = () => {
     applySettings();
     initTouchControls();
@@ -454,7 +268,6 @@ window.onload = () => {
         startCustomWiggle();
     }
     initDynamicWeather();
-    initEditPanel();
 
     setTimeout(() => {
         showDialogue("¡Bienvenido de nuevo! Me alegra mucho verte por aquí.");
