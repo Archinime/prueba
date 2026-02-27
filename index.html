@@ -43,21 +43,22 @@
             - Rotación asumida: (0°, 0°, 0°)
             - Sin controles de cámara, se sincroniza con el principal.
         -->
-        <model-viewer 
-            id="cortinas-model" 
-            class="bg-model secondary-model" 
-            src="cortinas.glb" 
-            shadow-intensity="1" 
-            disable-zoom 
-            disable-tap
-            disable-pan
-            interaction-prompt="none"
-            camera-target="-2m 1m 0m"
-            camera-orbit="0deg 70deg 2.8m"
-            min-camera-orbit="-35deg 70deg 2.8m"
-            max-camera-orbit="35deg 70deg 2.8m"
-            field-of-view="60deg">
-        </model-viewer>
+	<model-viewer 
+	    id="cortinas-model" 
+	    class="bg-model secondary-model" 
+	    src="cortinas.glb" 
+	    shadow-intensity="1" 
+	    disable-zoom 
+	    disable-tap
+	    disable-pan
+	    interaction-prompt="none"
+	    position="-0.5 0 0"          <!-- ← Esto la mueve a la izquierda -->
+	    camera-target="0m 1m 0m"     <!-- No cambies esto -->
+	    camera-orbit="0deg 70deg 2.8m"
+	    min-camera-orbit="-35deg 70deg 2.8m"
+	    max-camera-orbit="35deg 70deg 2.8m"
+	    field-of-view="60deg">
+	</model-viewer>
 
         <!-- 
             MODELO SECUNDARIO: PISO
